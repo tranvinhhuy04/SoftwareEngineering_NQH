@@ -24,3 +24,8 @@ _Trường Đại học Sài Gòn_
 - Ứng dụng các kiến thức đã học vào thực tiễn
 - Rèn luyện kỹ năng làm việc nhóm và quản lý dự án
 - Xây dựng một sản phẩm có ý nghĩa thực tiễn
+
+
+## 📝 Sản phẩm
+- Report: https://docs.google.com/document/d/1zPx6X-3frHWjnj4Luw2A6X1V8MSxzXzFsnEXEflehkU/edit?usp=drive_link
+- Mã nguồn và demo lưu trữ tại repo: https://github.com/tranvinhhuy04/SoftwareEngineering_NQH
