@@ -1,4 +1,3 @@
-# SoftwareEngineering_NQH
 ## 👥 Nhóm Thực Hiện
 
 Project được thực hiện bởi nhóm sinh viên Trường Đại học Sài Gòn:
