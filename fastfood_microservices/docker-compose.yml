@@ -1,0 +1,17 @@
+version: "3.8"
+services:
+  api-gateway:
+    build: ./src/api-gateway
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    depends_on:
+      - order-service
+    restart: unless-stopped
+
+  order-service:
+    build: ./src/order-service
+    container_name: order-service
+    ports:
+      - "3001:3001"
+    restart: unless-stopped

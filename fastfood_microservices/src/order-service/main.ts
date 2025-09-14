@@ -1,0 +1,10 @@
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  const port = process.env.PORT || 3001;  // Order Service mặc định 3001
+  await app.listen(port, '0.0.0.0');      // bind 0.0.0.0
+  console.log(`Order Service listening on port ${port}`);
+}
+bootstrap();
