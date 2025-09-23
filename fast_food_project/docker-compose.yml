@@ -1,0 +1,55 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:6
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   # cổng AMQP để các service (user-service, payment-service, api-gateway) kết nối
+      - "15672:15672" # giao diện web http://localhost:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "4000:4000"
+    depends_on:
+      - user-service
+      - payment-service
+      - rabbitmq
+    environment:
+      - RABBITMQ_URI=amqp://rabbitmq:5672
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    restart: always
+    depends_on:
+      - mongodb
+      - rabbitmq
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/fastfood
+      - RABBITMQ_URI=amqp://rabbitmq:5672
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    restart: always
+    depends_on:
+      - mongodb
+      - rabbitmq
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/fastfood
+      - RABBITMQ_URI=amqp://rabbitmq:5672
+
+volumes:
+  mongo_data:
