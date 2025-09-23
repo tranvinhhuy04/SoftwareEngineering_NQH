@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   mongodb:
     image: mongo:6
@@ -7,49 +8,70 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    restart: always
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
-      - "5672:5672"   # cổng AMQP để các service (user-service, payment-service, api-gateway) kết nối
-      - "15672:15672" # giao diện web http://localhost:15672
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Web UI
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+    restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api-gateway:
     build: ./api-gateway
     container_name: api-gateway
     ports:
       - "4000:4000"
     depends_on:
-      - user-service
-      - payment-service
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
     environment:
       - RABBITMQ_URI=amqp://rabbitmq:5672
+    restart: always
 
   user-service:
     build: ./user-service
     container_name: user-service
-    restart: always
     depends_on:
-      - mongodb
-      - rabbitmq
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       - MONGO_URI=mongodb://mongodb:27017/fastfood
       - RABBITMQ_URI=amqp://rabbitmq:5672
+    restart: always
 
   payment-service:
     build: ./payment-service
     container_name: payment-service
-    restart: always
     depends_on:
-      - mongodb
-      - rabbitmq
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       - MONGO_URI=mongodb://mongodb:27017/fastfood
       - RABBITMQ_URI=amqp://rabbitmq:5672
+    restart: always
 
 volumes:
   mongo_data:
+
+networks:
+  default:
+    name: fastfood_network

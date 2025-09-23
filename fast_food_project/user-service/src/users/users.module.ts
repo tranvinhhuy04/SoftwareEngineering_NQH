@@ -13,7 +13,7 @@ import { User, UserSchema } from './schemas/user.schema';
         name: 'USER_SERVICE',
         transport: Transport.RMQ,
         options: {
-          urls: ['amqp://localhost:5672'],
+          urls: [process.env.RABBITMQ_URI as string], // 👈 ép kiểu
           queue: 'users_queue',
           queueOptions: {
             durable: false,
