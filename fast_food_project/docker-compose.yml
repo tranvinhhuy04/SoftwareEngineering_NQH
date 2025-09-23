@@ -39,8 +39,12 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+      user-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
     environment:
-      - RABBITMQ_URI=amqp://rabbitmq:5672
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
     restart: always
 
   user-service:
@@ -53,7 +57,7 @@ services:
         condition: service_healthy
     environment:
       - MONGO_URI=mongodb://mongodb:27017/fastfood
-      - RABBITMQ_URI=amqp://rabbitmq:5672
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
     restart: always
 
   payment-service:
@@ -66,7 +70,7 @@ services:
         condition: service_healthy
     environment:
       - MONGO_URI=mongodb://mongodb:27017/fastfood
-      - RABBITMQ_URI=amqp://rabbitmq:5672
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
     restart: always
 
 volumes:
