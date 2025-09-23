@@ -1,7 +1,6 @@
-import { Injectable, NotFoundException, InternalServerErrorException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { ClientProxy } from '@nestjs/microservices';
 import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -10,18 +9,12 @@ import { UpdateUserDto } from './dto/update-user.dto';
 export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @Inject('USER_SERVICE') private readonly client: ClientProxy, // 👈 inject client
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     try {
       const createdUser = new this.userModel(createUserDto);
-      const savedUser = await createdUser.save();
-
-      // emit event sau khi tạo user
-      this.client.emit('user_created', savedUser);
-
-      return savedUser;
+      return await createdUser.save();
     } catch (error) {
       throw new InternalServerErrorException('Error creating user');
     }
@@ -55,10 +48,6 @@ export class UsersService {
       if (!user) {
         throw new NotFoundException(`User with id ${id} not found`);
       }
-
-      // emit event sau khi update user
-      this.client.emit('user_updated', user);
-
       return user;
     } catch (error) {
       throw error instanceof NotFoundException
@@ -73,10 +62,6 @@ export class UsersService {
       if (!user) {
         throw new NotFoundException(`User with id ${id} not found`);
       }
-
-      // emit event sau khi delete user
-      this.client.emit('user_deleted', { id });
-
       return user;
     } catch (error) {
       throw error instanceof NotFoundException

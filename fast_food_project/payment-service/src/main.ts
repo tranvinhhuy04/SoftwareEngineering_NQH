@@ -2,19 +2,19 @@ import { NestFactory } from '@nestjs/core';
 import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 import { PaymentsModule } from './payments/payments.module';
 
-async function bootstrap() {
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(PaymentsModule, {
+async function bootstrap() {const app = await NestFactory.create(PaymentsModule);
+  app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
-      urls: ['amqp://guest:guest@rabbitmq:5672'], // dùng tên container RabbitMQ
+      urls: ['amqp://rabbitmq:5672'],
       queue: 'payments_queue',
-      queueOptions: {
-        durable: false,
-      },
+      queueOptions: { durable: false },
     },
   });
 
-  await app.listen();
-  console.log('Payment service is listening...');
+  await app.startAllMicroservices();
+  await app.listen(3001); // HTTP API nếu cần
+  console.log('Payment-service running on port 3001');
+
 }
 bootstrap();
