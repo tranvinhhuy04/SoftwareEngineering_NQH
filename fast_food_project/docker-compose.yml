@@ -15,6 +15,23 @@ services:
       timeout: 5s
       retries: 5
 
+  seed-auth:
+    image: mongo:6
+    depends_on:
+      - mongodb
+    volumes:
+      - ./user-service\src\users\data\seed-auth.js:/seed.js:ro
+    entrypoint: ["sh", "-c", "mongosh 'mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/purely_auth_service' /seed.js"]
+
+  seed-payment:
+    image: mongo:6
+    depends_on:
+      - mongodb
+    volumes:
+      - ./payment-service\src\payments\data\seed-payment.js:/seed.js:ro
+    entrypoint: ["sh", "-c", "mongosh 'mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/purely_cart_service' /seed.js"]
+
+
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
