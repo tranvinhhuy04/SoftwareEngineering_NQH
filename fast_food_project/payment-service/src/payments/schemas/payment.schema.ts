@@ -3,7 +3,7 @@ import { Document } from 'mongoose';
 
 export type PaymentDocument = Payment & Document;
 
-@Schema()
+@Schema({timestamps: true, collection: 'Payments'})
 export class Payment {
   @Prop({ required: true })
   userId: string;
