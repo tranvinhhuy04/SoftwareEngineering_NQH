@@ -1,18 +1,20 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Transport } from '@nestjs/microservices';
+import { Transport, MicroserviceOptions } from '@nestjs/microservices';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
-  const app = await NestFactory.createMicroservice(AppModule, {
+  const app = await NestFactory.createMicroservice<MicroserviceOptions>(AppModule, {
     transport: Transport.RMQ,
     options: {
-      urls: [process.env.RABBITMQ_URI || 'amqp://guest:guest@rabbitmq:5672'],
+      urls: [process.env.RABBITMQ_URI || 'amqp://localhost:5672'],
       queue: 'payments_queue',
       queueOptions: { durable: false },
     },
   });
 
   await app.listen();
-  console.log('Payments service is listening on RabbitMQ...');
+  console.log('Payment running...');
+
 }
 bootstrap();
