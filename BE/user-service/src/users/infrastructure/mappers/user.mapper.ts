@@ -2,7 +2,7 @@ import { DeliveryDetailEntity } from "src/users/domain/entities/deliveryDetail.e
 import { UserEntity } from "../../domain/entities/user.entity";
 
 export class UserMapper {
-  // Schema -> Entity
+  // Document -> Entity
   static toEntity(userDoc: any, deliveryDoc?: any): UserEntity {
     const user = new UserEntity(
       userDoc._id,
@@ -31,7 +31,7 @@ export class UserMapper {
   }
 
   // Entity -> Schema object
-  static toPersistence(user: UserEntity): any {
+  static toUserPersistence(user: UserEntity): any {
     return {
       ID: user.ID,
       name: user.name,
