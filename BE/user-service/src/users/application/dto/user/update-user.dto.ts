@@ -1,8 +1,9 @@
-import { UserActive } from "../../domain/enum/user-active.enum";
-import { UserType } from "../../domain/enum/user-type.enum";
+import { UserActive } from "src/users/domain/enum/user-active.enum";
+import { UserType } from "src/users/domain/enum/user-type.enum";
+import { UpdateDeliveryDetailDto } from "../delivery-detail/update-deliveryDetail.dto";
 
 export class UpdateUserDto {
-    readonly ID?: string;
+    readonly ID: string;
     readonly name?: string;
     readonly email?: string;
     readonly password?: string;
@@ -10,4 +11,5 @@ export class UpdateUserDto {
     readonly address?: string
     readonly userType?: UserType
     readonly active?: UserActive
+    readonly deliveryDetail?: UpdateDeliveryDetailDto
 }
