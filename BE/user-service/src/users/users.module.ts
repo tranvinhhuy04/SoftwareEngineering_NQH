@@ -1,28 +1,41 @@
 import { Module } from '@nestjs/common';
-import { ClientsModule, Transport } from '@nestjs/microservices';
 import { MongooseModule } from '@nestjs/mongoose';
-import { UsersService } from './infrastructure/services/users.service';
-import { UsersController } from './presentation/users.controller';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 import { User, UserSchema } from './infrastructure/database/user.schema';
+import { CreateUserUseCase } from './application/use-cases/createUser.usecase';
+import { UserController } from './presentation/users.controller';
+import { UserRepositoryImpl } from './infrastructure/respositories/user.repository.impl';
+import { IUserRepository } from './domain/respositories/user.repository';
+import { USER_REPOSITORY } from './constants';
+import { DeliveryDetail, DeliveryDetailSchema } from './infrastructure/database/deliveryDetail.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: DeliveryDetail.name, schema: DeliveryDetailSchema },  // ← thêm cái này
+    ]),
+
     ClientsModule.register([
       {
         name: 'USER_SERVICE',
         transport: Transport.RMQ,
         options: {
-          urls: [process.env.RABBITMQ_URI as string], // 👈 ép kiểu
+          urls: [process.env.RABBITMQ_URI as string],
           queue: 'users_queue',
-          queueOptions: {
-            durable: false,
-          },
+          queueOptions: { durable: false },
         },
       },
     ]),
   ],
-  controllers: [UsersController],
-  providers: [UsersService],
+  controllers: [UserController],
+  providers: [
+    CreateUserUseCase,
+    {
+      provide: USER_REPOSITORY,   // token là interface
+      useClass: UserRepositoryImpl, // class thực tế
+    },
+  ],
+  exports: [CreateUserUseCase],
 })
 export class UsersModule {}

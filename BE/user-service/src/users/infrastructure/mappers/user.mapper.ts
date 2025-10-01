@@ -7,7 +7,7 @@ import { UserActive } from "src/users/domain/enum/user-active.enum";
 
 export class UserMapper {
   // Document -> Entity
-  static toEntity(userDoc: any, deliveryDoc?: any): UserEntity {
+  static docToEntity(userDoc: any, deliveryDoc?: any): UserEntity {
     const user = new UserEntity(
       userDoc._id,
       userDoc.ID,
@@ -57,31 +57,32 @@ export class UserMapper {
     };
   }
 
-  static fromCreateDtoToEntity(dto: CreateUserDto): UserEntity {
+  static DtoToEntity(dto: CreateUserDto, userId: string): UserEntity {
     const user = new UserEntity(
-      new Types.ObjectId(),
-      dto.ID,
+      new Types.ObjectId(), // hoặc nhận từ Use Case
+      userId,
       dto.name,
       dto.email,
       dto.password,
       dto.phone || '',
-      dto.address || '',        
-      dto.userType ?? UserType.CUSTOMER,
+      dto.address || '',
+      dto.userType,
       dto.active ?? UserActive.ACTIVE
     );
 
-    if (dto.userType === UserType.DELIVERY && dto.deliveryDetail) {
-      const delivery = new DeliveryDetailEntity(
+    // Nếu DTO có deliveryDetail thì tạo entity, nhưng Use Case mới quyết định khi nào gán
+    let deliveryDetail: DeliveryDetailEntity | undefined = undefined;
+    if (dto.deliveryDetail) {
+      deliveryDetail = new DeliveryDetailEntity(
         new Types.ObjectId(),
         dto.deliveryDetail.ID,
         user,
         dto.deliveryDetail.available,
         dto.deliveryDetail.vehicle_info
       );
-      user.assignDeliveryDetail(delivery);
     }
 
     return user;
   }
-
 }
+

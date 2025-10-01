@@ -50,7 +50,7 @@ export class UserRepositoryImpl implements IUserRepository{
                 deliveryDoc = await this.deliveryModel.findOne({ user: userDoc.ID }).exec();
             }
 
-            return UserMapper.toEntity(userDoc, deliveryDoc);
+            return UserMapper.docToEntity(userDoc, deliveryDoc);
         } catch (error) {
             throw new Error(`Error finding user by filter ${JSON.stringify(filter)}: ${error.message}`);
         }
@@ -72,7 +72,7 @@ export class UserRepositoryImpl implements IUserRepository{
             const deliveryMap = new Map(deliveryDocs.map(d => [d.user.toString(), d]));
             return userDocs.map(userDoc => {
                 const deliveryDoc = deliveryMap.get(userDoc.ID);
-                return UserMapper.toEntity(userDoc, deliveryDoc);
+                return UserMapper.docToEntity(userDoc, deliveryDoc);
             });
 
         } catch (error) {
