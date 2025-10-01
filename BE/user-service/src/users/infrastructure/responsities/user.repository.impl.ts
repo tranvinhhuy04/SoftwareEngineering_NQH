@@ -71,9 +71,19 @@ export class UserRepositoryImpl implements IUserRepository{
             throw new Error(`Error finding user by ID: ${error.message}`);
         }
     }
-    findAll(): Promise<UserEntity[]> {
-        throw new Error("Method not implemented.");
-    }
+    async findAll(): Promise<UserEntity[]> { 
+        try { 
+            const userDocs = await this.userModel.find().exec(); 
+            const deliveryDocs = await this.deliveryModel.find().exec(); 
+            return userDocs.map(userDoc => { 
+                const deliveryDoc = deliveryDocs.find(delivery => delivery.user.toString() === userDoc.ID);
+                 return UserMapper.toEntity(userDoc, deliveryDoc); }); 
+                } 
+                catch (error) { 
+                    throw new Error(`Error finding all users: ${error.message}`);
+                }
+            }
+            
     remove(id: string): Promise<void> {
         throw new Error("Method not implemented.");
     }
