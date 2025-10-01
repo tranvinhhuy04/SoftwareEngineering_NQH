@@ -4,7 +4,7 @@ import { Vehicle } from "src/users/domain/enum/delivery-vehicle.enum";
 
 export class CreateDeliveryDetailDto {
         readonly ID: string;
-        readonly user: User; 
+        readonly user: string; 
         readonly available: Available;
         readonly vehicle_info: Vehicle;
 }
