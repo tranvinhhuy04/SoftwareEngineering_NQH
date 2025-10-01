@@ -17,14 +17,16 @@ export class UserRepositoryImpl implements IUserRepository{
         @InjectModel(DeliveryDetail.name) 
         private readonly deliveryModel: Model<DeliveryDetailDocument> 
     ) {}
+
+    // save user (create or update)
     async save(user: UserEntity): Promise<UserEntity> {
         try {
-            // Chuyển Entity -> object MongoDB
-            const userObj = UserMapper.toPersistence(user); 
-            // Lưu hoặc update user
+            // map entity to schema object for persistence
+            const userObj = UserMapper.toUserPersistence(user); 
+            // save or update user
             await this.userModel.updateOne({ ID: user.ID }, userObj, { upsert: true });
 
-            // Nếu là Delivery, lưu thông tin chi tiết giao hàng
+            // If user is of type Delivery, save delivery details 
             if (user.userType === UserType.DELIVERY && user.getDeliveryDetail()) {
                 const deliveryObj = UserMapper.toDeliveryPersistence(user.getDeliveryDetail(), user.ID); 
                 await this.deliveryModel.updateOne({ user: user.ID }, deliveryObj, { upsert: true });
@@ -37,12 +39,37 @@ export class UserRepositoryImpl implements IUserRepository{
         }
     }
 
-
-    findById(id: string): Promise<UserEntity | null> {
-        throw new Error("Method not implemented.");
+    // find user by id
+    async findById(id: string): Promise<UserEntity | null> {
+        try {
+            const userDoc = await this.userModel.findOne({ ID: id }).exec();
+            if (userDoc) {
+                let deliveryDoc: DeliveryDetailDocument | null = null;
+                if (userDoc.userType === UserType.DELIVERY) {
+                    deliveryDoc = await this.deliveryModel.findOne({ user: userDoc.ID }).exec();
+                }
+                return UserMapper.toEntity(userDoc, deliveryDoc);
+            }
+            return null;
+        } catch (error) {
+            throw new Error(`Error finding user by ID: ${error.message}`);
+        }
     }
-    findByEmail(email: string): Promise<UserEntity | null> {
-        throw new Error("Method not implemented.");
+
+    async findByEmail(email: string): Promise<UserEntity | null> {
+        try {
+            const userDoc = await this.userModel.findOne({ email: email }).exec();
+            if (userDoc) {
+                let deliveryDoc: DeliveryDetailDocument | null = null;
+                if (userDoc.userType === UserType.DELIVERY) {
+                    deliveryDoc = await this.deliveryModel.findOne({ user: userDoc.ID }).exec();
+                }
+                return UserMapper.toEntity(userDoc, deliveryDoc);
+            }
+            return null;
+        } catch (error) {
+            throw new Error(`Error finding user by ID: ${error.message}`);
+        }
     }
     findAll(): Promise<UserEntity[]> {
         throw new Error("Method not implemented.");
