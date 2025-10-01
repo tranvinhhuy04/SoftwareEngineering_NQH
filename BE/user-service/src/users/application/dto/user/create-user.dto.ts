@@ -3,7 +3,6 @@ import { UserActive } from "src/users/domain/enum/user-active.enum";
 import { CreateDeliveryDetailDto } from "../delivery-detail/create-deliveryDetail.dto";
 
 export class CreateUserDto {
-    readonly ID: string;
     readonly name: string;
     readonly email: string;
     readonly password: string;
