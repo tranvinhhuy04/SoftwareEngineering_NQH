@@ -57,7 +57,7 @@ export class UserMapper {
     };
   }
 
-  static fromCreateDto(dto: CreateUserDto): UserEntity {
+  static fromCreateDtoToEntity(dto: CreateUserDto): UserEntity {
     const user = new UserEntity(
       new Types.ObjectId(),
       dto.ID,
