@@ -1,11 +1,11 @@
 import { UserType } from "../enum/user-type.enum";
 import { UserActive } from "../enum/user-active.enum";
 import { DeliveryDetailEntity } from "./deliveryDetail.entity";
-import { ObjectId } from "mongoose";
+import { Types } from "mongoose";
 
 export class UserEntity {
   constructor(
-    public readonly _id: ObjectId,
+    private readonly _id: Types.ObjectId,
     public readonly ID: string,
     public name: string,
     public email: string,
