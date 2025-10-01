@@ -1,5 +1,5 @@
-import { UserActive } from "../../enum/user-active.enum";
-import { UserType } from "../../enum/user-type.enum";
+import { UserActive } from "../../domain/enum/user-active.enum";
+import { UserType } from "../../domain/enum/user-type.enum";
 
 export class UpdateUserDto {
     readonly ID?: string;

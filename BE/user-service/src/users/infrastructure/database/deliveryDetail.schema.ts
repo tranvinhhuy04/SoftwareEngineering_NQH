@@ -1,8 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { User } from './user.schema';
-import { Available } from '../enum/delivery-available.enum';
-import { Vehicle } from '../enum/delivery-vehicle.enum';
+import { Available } from '../../domain/enum/delivery-available.enum';
+import { Vehicle } from '../../domain/enum/delivery-vehicle.enum';
 
 export type DeliveryDetailDocument = DeliveryDetail & Document;
 

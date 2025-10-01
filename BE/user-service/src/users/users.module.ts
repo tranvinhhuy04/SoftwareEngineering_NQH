@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { MongooseModule } from '@nestjs/mongoose';
-import { UsersService } from './users.service';
-import { UsersController } from './users.controller';
-import { User, UserSchema } from './schemas/user.schema';
+import { UsersService } from './infrastructure/services/users.service';
+import { UsersController } from './presentation/users.controller';
+import { User, UserSchema } from './infrastructure/database/user.schema';
 
 @Module({
   imports: [
