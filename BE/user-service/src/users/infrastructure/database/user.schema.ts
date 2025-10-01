@@ -26,10 +26,10 @@ export class User {
   @Prop()
   address: string
 
-  @Prop({required: true, default:UserType.CUSTOMER})
+  @Prop({required: true, enum:UserType, default:UserType.CUSTOMER})
   userType: UserType
 
-  @Prop({required: true, default: UserActive.ACTIVE})
+  @Prop({required: true, enum: UserActive, default: UserActive.ACTIVE})
   active: UserActive
 }
 

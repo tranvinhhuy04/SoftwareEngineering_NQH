@@ -12,13 +12,12 @@ export class DeliveryDetail{
     ID: string;
 
     @Prop({ type: Types.ObjectId, ref: User.name, required: true })
-    user: User; 
+    user: Types.ObjectId;
 
-    @Prop({ required: true, default: Available.ASSIGN})
+    @Prop({ required: true, enum: Available, default: Available.ASSIGN })
     available: Available;
 
-    @Prop({required: true, default:Vehicle.MOTORBIKE})
+    @Prop({ required: true, enum: Vehicle, default: Vehicle.MOTORBIKE })
     vehicle_info: Vehicle;
-
 }
 export const DeliveryDetailSchema = SchemaFactory.createForClass(DeliveryDetail);
