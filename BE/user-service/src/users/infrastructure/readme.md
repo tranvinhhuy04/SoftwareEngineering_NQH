@@ -13,6 +13,7 @@ Nó là  **implementation layer** , đóng vai trò **cầu nối** giữa `doma
 infrastructure/
  ├── database/
  │    ├── user.schema.ts
+ |── mappers/
  │    └── user.mapper.ts
  └── repositories/
       └── user.repository.impl.ts
