@@ -27,4 +27,8 @@ export class UserEntity {
   getDeliveryDetail(): DeliveryDetailEntity | undefined {
     return this.deliveryDetail;
   }
+
+  get_Id(): Types.ObjectId {
+    return this._id;
+  }
 }

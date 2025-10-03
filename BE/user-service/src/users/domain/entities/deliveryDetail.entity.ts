@@ -7,8 +7,13 @@ export class DeliveryDetailEntity{
     constructor(
         private readonly _id: Types.ObjectId,
         public readonly ID: string,
-        public user: UserEntity, 
+        public user: Types.ObjectId, 
         public available: Available,
         public vehicle_info: Vehicle,
     ){}
+
+    get_Id(): Types.ObjectId {
+        return this._id;
+    }
 }
+

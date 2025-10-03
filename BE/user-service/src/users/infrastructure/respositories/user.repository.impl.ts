@@ -26,10 +26,14 @@ export class UserRepositoryImpl implements IUserRepository{
             // save or update user
             await this.userModel.updateOne({ ID: user.ID }, userObj, { upsert: true });
 
+            console.log(">>> Delivery Detail", JSON.stringify(user.getDeliveryDetail(), null, 2));
+            console.log(">>> User Type", user.userType, UserType.DELIVERY);
             // If user is of type Delivery, save delivery details 
             if (user.userType === UserType.DELIVERY && user.getDeliveryDetail()) {
-                const deliveryObj = UserMapper.toDeliveryPersistence(user.getDeliveryDetail(), user.ID); 
-                await this.deliveryModel.updateOne({ user: user.ID }, deliveryObj, { upsert: true });
+                const deliveryObj = UserMapper.toDeliveryPersistence(user.getDeliveryDetail(), user); 
+                console.log(">>> Delivery Obj", JSON.stringify(deliveryObj, null, 2));
+                await this.deliveryModel.updateOne({ user: user.get_Id() }, deliveryObj, { upsert: true });
+                // await this.deliveryModel.create(deliveryObj);
             }
 
             return user;

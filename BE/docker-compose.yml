@@ -56,7 +56,7 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
-      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/purely_auth_service?retryWrites=true&w=majority&appName=tyty
+      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/user-service?retryWrites=true&w=majority&appName=tyty
       - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
     restart: always
 

@@ -8,6 +8,7 @@ import { UserRepositoryImpl } from './infrastructure/respositories/user.reposito
 import { IUserRepository } from './domain/respositories/user.repository';
 import { USER_REPOSITORY } from './constants';
 import { DeliveryDetail, DeliveryDetailSchema } from './infrastructure/database/deliveryDetail.schema';
+import { BcryptPasswordService } from './infrastructure/services/bcrypt-password.service';
 
 @Module({
   imports: [
@@ -34,7 +35,9 @@ import { DeliveryDetail, DeliveryDetailSchema } from './infrastructure/database/
     {
       provide: USER_REPOSITORY,   // token là interface
       useClass: UserRepositoryImpl, // class thực tế
+      
     },
+    BcryptPasswordService,
   ],
   exports: [CreateUserUseCase],
 })

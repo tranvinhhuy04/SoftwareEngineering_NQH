@@ -25,7 +25,7 @@ export class UserMapper {
         new DeliveryDetailEntity(
           deliveryDoc._id,
           deliveryDoc.ID,
-          user, 
+          user.get_Id(),
           deliveryDoc.available,
           deliveryDoc.vehicle_info
         )
@@ -48,16 +48,17 @@ export class UserMapper {
     };
   }
 
-  static toDeliveryPersistence(detail: any, userId: string): any {
+  static toDeliveryPersistence(detail: any, user: UserEntity): any {
     return {
+      _id: new Types.ObjectId(),
       ID: detail.ID,
-      user: userId,
+      user: user.get_Id(),
       available: detail.available,
       vehicle_info: detail.vehicle_info,
     };
   }
 
-  static DtoToEntity(dto: CreateUserDto, userId: string): UserEntity {
+  static mapperUserDtoToEntity(dto: CreateUserDto, userId: string, deliveryDetailID?: string): UserEntity {
     const user = new UserEntity(
       new Types.ObjectId(), // hoặc nhận từ Use Case
       userId,
@@ -69,20 +70,17 @@ export class UserMapper {
       dto.userType,
       dto.active ?? UserActive.ACTIVE
     );
-
-    // Nếu DTO có deliveryDetail thì tạo entity, nhưng Use Case mới quyết định khi nào gán
-    let deliveryDetail: DeliveryDetailEntity | undefined = undefined;
-    if (dto.deliveryDetail) {
-      deliveryDetail = new DeliveryDetailEntity(
-        new Types.ObjectId(),
-        dto.deliveryDetail.ID,
-        user,
-        dto.deliveryDetail.available,
-        dto.deliveryDetail.vehicle_info
-      );
-    }
-
     return user;
+  }
+
+  static mapperDeliveryDtoToEntity(dto: any, user: UserEntity, deliveryDetailID: string): DeliveryDetailEntity {
+    return new DeliveryDetailEntity(
+      new Types.ObjectId(), // hoặc nhận từ Use Case
+      deliveryDetailID,
+      user.get_Id(),
+      dto.available,
+      dto.vehicle_info
+    );
   }
 }
 
