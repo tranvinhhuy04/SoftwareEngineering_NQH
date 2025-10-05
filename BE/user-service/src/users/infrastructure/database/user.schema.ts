@@ -31,6 +31,9 @@ export class User {
 
   @Prop({required: true, enum: UserActive, default: UserActive.ACTIVE})
   active: UserActive
+
+  @Prop()
+  avatar?: string
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
