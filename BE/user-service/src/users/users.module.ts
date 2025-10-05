@@ -5,16 +5,19 @@ import { User, UserSchema } from './infrastructure/database/user.schema';
 import { CreateUserUseCase } from './application/use-cases/createUser.usecase';
 import { UserController } from './presentation/users.controller';
 import { UserRepositoryImpl } from './infrastructure/respositories/user.repository.impl';
-import { IUserRepository } from './domain/respositories/user.repository';
 import { USER_REPOSITORY } from './constants';
-import { DeliveryDetail, DeliveryDetailSchema } from './infrastructure/database/deliveryDetail.schema';
+import { DeliveryProfile, DeliveryProfileSchema } from './infrastructure/database/deliveryProfile.schema';
 import { BcryptPasswordService } from './infrastructure/services/bcrypt-password.service';
+import { StaffProfile, StaffProfileSchema } from './infrastructure/database/staffProfile.schema';
+import { CustomerProfile, CustomerProfileSchema } from './infrastructure/database/customerProfile.schema';
 
-@Module({
+@Module({ 
   imports: [
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
-      { name: DeliveryDetail.name, schema: DeliveryDetailSchema },  // ← thêm cái này
+      { name: DeliveryProfile.name, schema: DeliveryProfileSchema }, 
+      { name: StaffProfile.name, schema: StaffProfileSchema },
+      { name: CustomerProfile.name, schema: CustomerProfileSchema }
     ]),
 
     ClientsModule.register([
