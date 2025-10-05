@@ -1,9 +1,8 @@
 import { Types } from "mongoose";
 import { Available } from "../enum/delivery-available.enum";
 import { Vehicle } from "../enum/delivery-vehicle.enum";
-import { UserEntity } from "./user.entity";
 
-export class DeliveryDetailEntity{
+export class DeliveryProfileEntity{
     constructor(
         private readonly _id: Types.ObjectId,
         public readonly ID: string,
