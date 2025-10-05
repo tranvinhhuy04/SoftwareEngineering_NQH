@@ -8,6 +8,9 @@ import { StaffProfileEntity } from 'src/users/domain/entities/staffProfile.entit
 import { UserEntity } from 'src/users/domain/entities/user.entity';
 import { Vehicle } from 'src/users/domain/enum/delivery-vehicle.enum';
 import { Available } from 'src/users/domain/enum/delivery-available.enum';
+import { DeliveryMapper } from './delivery.mapper';
+import { CustomerMapper } from './customer.mapper';
+import { StaffMapper } from './staff.mapper';
 
 describe('UserMapper', () => {
   const userId = new Types.ObjectId();
@@ -49,7 +52,7 @@ describe('UserMapper', () => {
   // ===============================================
   it('should map DeliveryDto to DeliveryProfileEntity', () => {
     const dto = { available: Available.ASSIGN, vehicle_info: Vehicle.MOTORBIKE };
-    const delivery = UserMapper.mapperDeliveryDtoToEntity(dto, baseUser, 'DEL001');
+    const delivery = DeliveryMapper.mapperDeliveryDtoToEntity(dto, baseUser, 'DEL001');
 
     expect(delivery).toBeInstanceOf(DeliveryProfileEntity);
     expect(delivery.ID).toBe('DEL001');
@@ -59,7 +62,7 @@ describe('UserMapper', () => {
   // ===============================================
   it('should map StaffDto to StaffProfileEntity', () => {
     const dto = { shift: 'MORNING', isActive: true, handledOrders: 3 };
-    const staff = UserMapper.mapperStaffDtoToEntity(dto, baseUser, 'STF001');
+    const staff = StaffMapper.mapperStaffDtoToEntity(dto, baseUser, 'STF001');
 
     expect(staff).toBeInstanceOf(StaffProfileEntity);
     expect(staff.ID).toBe('STF001');
@@ -75,7 +78,7 @@ describe('UserMapper', () => {
       favoriteItems: ['Pizza'],
     };
 
-    const customer = UserMapper.mapperCustomerDtoToEntity(dto, baseUser, 'CUST001');
+    const customer = CustomerMapper.mapperCustomerDtoToEntity(dto, baseUser, 'CUST001');
     expect(customer.ID).toBe('CUST001');
     expect(customer.defaultAddress).toBe('123 ABC');
     expect(customer.savedPaymentMethods.length).toBe(1);
@@ -83,7 +86,7 @@ describe('UserMapper', () => {
 
   // ===============================================
   it('should handle empty dto in CustomerMapper gracefully', () => {
-    const customer = UserMapper.mapperCustomerDtoToEntity(undefined, baseUser, 'CUST002');
+    const customer = CustomerMapper.mapperCustomerDtoToEntity(undefined, baseUser, 'CUST002');
     expect(customer.ID).toBe('CUST002');
     expect(customer.savedPaymentMethods).toEqual([]);
     expect(customer.favoriteItems).toEqual([]);
@@ -116,7 +119,7 @@ describe('UserMapper', () => {
       active: 'ACTIVE',
     };
 
-    const user = UserMapper.docToEntity(userDoc, deliveryDoc);
+    const user = UserMapper.docToEntity(userDoc);
     expect(user).toBeInstanceOf(UserEntity);
     expect(user.getDeliveryProfile()).toBeDefined();
   });

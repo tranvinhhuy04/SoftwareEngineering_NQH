@@ -9,6 +9,9 @@ import { DeliveryProfile, DeliveryProfileDocument } from "../database/deliveryPr
 import { UserType } from "src/users/domain/enum/user-type.enum";
 import { CustomerProfile, CustomerProfileDocument } from "../database/customerProfile.schema";
 import { StaffProfile, StaffProfileDocument } from "../database/staffProfile.schema";
+import { DeliveryMapper } from "../mappers/delivery.mapper";
+import { CustomerMapper } from "../mappers/customer.mapper";
+import { StaffMapper } from "../mappers/staff.mapper";
 
 @Injectable()
 export class UserRepositoryImpl implements IUserRepository {
@@ -53,7 +56,7 @@ export class UserRepositoryImpl implements IUserRepository {
       // If userType = DELIVERY → save deliveryProfile
       if (user.userType === UserType.DELIVERY && user.getDeliveryProfile()) {
         try {
-          const deliveryObj = UserMapper.toDeliveryPersistence(user.getDeliveryProfile(),user);
+          const deliveryObj = DeliveryMapper.toDeliveryPersistence(user.getDeliveryProfile(),user);
           const deliveryResult = await this.deliveryModel.updateOne({ user: user.get_Id() }, deliveryObj, { upsert: true });
           this.logger.debug(`DeliveryProfile upsert result: ${JSON.stringify(deliveryResult)}`);
         } catch (deliveryErr) {
@@ -64,7 +67,7 @@ export class UserRepositoryImpl implements IUserRepository {
 
       if (user.userType === UserType.CUSTOMER && user.getCustomerProfile()) {
         try {
-          const customerObj = UserMapper.toCustomerPersistence(user.getCustomerProfile(), user);
+          const customerObj = CustomerMapper.toCustomerPersistence(user.getCustomerProfile(), user);
           await this.customerProfileModel.updateOne({ user: user.get_Id() }, customerObj, { upsert: true });
         
         } catch (error) {
@@ -75,7 +78,7 @@ export class UserRepositoryImpl implements IUserRepository {
 
       if (user.userType === UserType.STAFF && user.getStaffProfile()) {
         try {
-          const staffObj = UserMapper.toStaffPersistence(user.getStaffProfile(), user);
+          const staffObj = StaffMapper.toStaffPersistence(user.getStaffProfile(), user);
           await this.staffProfileModel.updateOne({ user: user.get_Id() }, staffObj, { upsert: true });
         } catch (error) {
           this.logger.error(`Error saving staff Profile for user ${user.ID}: ${error.message}`);
@@ -108,7 +111,7 @@ export class UserRepositoryImpl implements IUserRepository {
           .exec();
       }
 
-      return UserMapper.docToEntity(userDoc, deliveryDoc);
+      return UserMapper.docToEntity(userDoc);
     } catch (error) {
       this.logger.error(`Error finding user by filter ${JSON.stringify(filter)}: ${error.message}`);
       throw new Error(`Error finding user by filter: ${error.message}`);

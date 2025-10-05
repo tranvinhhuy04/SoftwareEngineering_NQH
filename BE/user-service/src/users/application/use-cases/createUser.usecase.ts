@@ -8,6 +8,9 @@ import { IdGeneratorService } from "src/users/domain/services/id-generator.servi
 import { USER_REPOSITORY } from "src/users/constants";
 import { BcryptPasswordService } from "src/users/infrastructure/services/bcrypt-password.service";
 import { RpcException } from "@nestjs/microservices";
+import { DeliveryMapper } from "src/users/infrastructure/mappers/delivery.mapper";
+import { StaffMapper } from "src/users/infrastructure/mappers/staff.mapper";
+import { CustomerMapper } from "src/users/infrastructure/mappers/customer.mapper";
 
 @Injectable()
 export class CreateUserUseCase {
@@ -70,7 +73,7 @@ export class CreateUserUseCase {
       case UserType.DELIVERY:
         if (dto.deliveryProfile) {
           const deliveryId = IdGeneratorService.generateDeliveryProfileId();
-          const delivery = UserMapper.mapperDeliveryDtoToEntity(dto.deliveryProfile, user, deliveryId);
+          const delivery = DeliveryMapper.mapperDeliveryDtoToEntity(dto.deliveryProfile, user, deliveryId);
           user.assignDeliveryProfile(delivery);
         }
         break;
@@ -78,7 +81,7 @@ export class CreateUserUseCase {
       case UserType.STAFF:
         if (dto.staffProfile) {
           const staffId = IdGeneratorService.generateStaffProfileId();
-          const staff = UserMapper.mapperStaffDtoToEntity(dto.staffProfile, user, staffId);
+          const staff = StaffMapper.mapperStaffDtoToEntity(dto.staffProfile, user, staffId);
           user.assignStaffProfile(staff);
         }
         break;
@@ -86,7 +89,7 @@ export class CreateUserUseCase {
       case UserType.CUSTOMER:
         if (dto.customerProfile) {
           const customerId = IdGeneratorService.generateCustomerProfileId();
-          const customer = UserMapper.mapperCustomerDtoToEntity(dto.customerProfile, user, customerId);
+          const customer = CustomerMapper.mapperCustomerDtoToEntity(dto.customerProfile, user, customerId);
           user.assignCustomerProfile(customer);
         }
         break;
