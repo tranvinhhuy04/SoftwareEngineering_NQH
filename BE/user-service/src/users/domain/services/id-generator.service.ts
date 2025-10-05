@@ -25,4 +25,23 @@ export class IdGeneratorService {
     const prefix = this.prefixMap[userType] ?? "U";
     this.counters[prefix] = 0;
   }
+
+  static generateCustomerProfileId(): string {
+    const prefix = "CPro";
+    this.counters[prefix] = (this.counters[prefix] ?? 0) + 1;
+    return `${prefix}${String(this.counters[prefix]).padStart(this.PAD_LENGTH, "0")}`;
+  }
+  
+  static generateStaffProfileId(): string {
+    const prefix = "SPro";
+    this.counters[prefix] = (this.counters[prefix] ?? 0) + 1;
+    return `${prefix}${String(this.counters[prefix]).padStart(this.PAD_LENGTH, "0")}`;
+  }
+
+  static generateDeliveryProfileId(): string {
+    const prefix = "DPro";
+    this.counters[prefix] = (this.counters[prefix] ?? 0) + 1;
+    return `${prefix}${String(this.counters[prefix]).padStart(this.PAD_LENGTH, "0")}`;
+  }
+  
 }
