@@ -8,6 +8,8 @@ import { GetUserByIdUseCase } from "../application/use-cases/getUserById.usecase
 import { SearchUserUseCase } from "../application/use-cases/searchUser.usecase";
 import { GetUserByEmailUseCase } from "../application/use-cases/getUserByEmail.usecase";
 import { DeletedUsersUseCase } from "../application/use-cases/deleteUser.usecase";
+import { UpdateUserUseCase } from "../application/use-cases/updateUser.usecase";
+import { UpdateUserDto } from "../application/dto/user/update-user.dto";
 
 @Controller()
 export class UserController {
@@ -18,6 +20,7 @@ export class UserController {
     private readonly getUserByEmailUseCase: GetUserByEmailUseCase,
     private readonly searchUserUseCase: SearchUserUseCase,
     private readonly getDeletedUsersUseCase: DeletedUsersUseCase,
+    private readonly updateUserUseCase: UpdateUserUseCase,
   
   ) {}
 
@@ -50,5 +53,12 @@ export class UserController {
   async getDeletedUsers(@Payload() userId: string): Promise<any> {
     return this.getDeletedUsersUseCase.execute(userId);
   }
-
+  
+  @MessagePattern({ cmd: 'update_user' })
+  async updateUser(
+    @Payload() data: { id: string; dto: UpdateUserDto }
+ ): Promise<UserEntity> {
+    const { id, dto } = data;
+    return await this.updateUserUseCase.execute(id, dto);
+  }
 }

@@ -14,6 +14,7 @@ import { CustomerMapper } from "../mappers/customer.mapper";
 import { StaffMapper } from "../mappers/staff.mapper";
 import { UserQueryHelper } from "./user-query.helper";
 import { UserProfileHelper } from "./user-profile.helper";
+import { UpdateUserDto } from "src/users/application/dto/user/update-user.dto";
 
 @Injectable()
 export class UserRepositoryImpl implements IUserRepository {
@@ -25,6 +26,62 @@ export class UserRepositoryImpl implements IUserRepository {
     @InjectModel(CustomerProfile.name) private readonly customerModel: Model<CustomerProfileDocument>,
     @InjectModel(StaffProfile.name) private readonly staffModel: Model<StaffProfileDocument>,
   ) {}
+
+  // ✅ UPDATE USER + PROFILE
+  async update(id: string, user: UserEntity): Promise<UserEntity> {
+    try {
+      const existingUser = await this.userModel.findOne({ ID: id }).exec();
+      if (!existingUser) throw new Error(`User with ID=${id} not found`);
+
+      const userObj = UserMapper.toUserPersistence(user);
+      const updatedUserDoc = await this.userModel.findOneAndUpdate(
+        { ID: id },
+        userObj,
+        { new: true }
+      ).exec();
+
+      if (!updatedUserDoc) throw new Error(`Failed to update user with ID=${id}`);
+
+      // Cập nhật profile theo userType
+      switch (user.userType) {
+        case UserType.DELIVERY:
+          if (user.getDeliveryProfile()) {
+            const deliveryObj = DeliveryMapper.toDeliveryPersistence(user.getDeliveryProfile(), user);
+            await this.deliveryModel.updateOne({ user: updatedUserDoc._id }, deliveryObj, { upsert: true });
+          }
+          break;
+        case UserType.CUSTOMER:
+          if (user.getCustomerProfile()) {
+            const customerObj = CustomerMapper.toCustomerPersistence(user.getCustomerProfile(), user);
+            await this.customerModel.updateOne({ user: updatedUserDoc._id }, customerObj, { upsert: true });
+          }
+          break;
+        case UserType.STAFF:
+          if (user.getStaffProfile()) {
+            const staffObj = StaffMapper.toStaffPersistence(user.getStaffProfile(), user);
+            await this.staffModel.updateOne({ user: updatedUserDoc._id }, staffObj, { upsert: true });
+          }
+          break;
+      }
+
+      const updatedEntity = await UserProfileHelper.attachProfile(
+        updatedUserDoc,
+        {
+          deliveryModel: this.deliveryModel,
+          customerModel: this.customerModel,
+          staffModel: this.staffModel,
+        },
+        { UserMapper, DeliveryMapper, CustomerMapper, StaffMapper },
+        this.logger
+      );
+
+      return updatedEntity;
+    } catch (error) {
+      this.logger.error(`Error updating user with ID=${id}: ${error.message}`);
+      throw new Error(`Error updating user: ${error.message}`);
+    }
+  }
+
 
   // ✅ SAVE USER + PROFILE
   async save(user: UserEntity): Promise<UserEntity> {

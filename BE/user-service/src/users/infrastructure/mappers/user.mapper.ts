@@ -7,6 +7,7 @@ import { UserActive } from "src/users/domain/enum/user-active.enum";
 import { StaffProfileEntity } from "src/users/domain/entities/staffProfile.entity";
 import { Available } from "src/users/domain/enum/delivery-available.enum";
 import { Vehicle } from "src/users/domain/enum/delivery-vehicle.enum";
+import { UpdateUserDto } from "src/users/application/dto/user/update-user.dto";
 
 export class UserMapper {
   // Document -> Entity
@@ -60,6 +61,34 @@ export class UserMapper {
     return user;
   }
 
+  static mergeEntityWithUpdateDto(
+    user: UserEntity,
+    dto: UpdateUserDto
+  ): UserEntity {
+    if (dto.name !== undefined) user.name = dto.name;
+    if (dto.email !== undefined) user.email = dto.email;
+    if (dto.phone !== undefined) user.phone = dto.phone;
+    if (dto.address !== undefined) user.address = dto.address;
+    if (dto.active !== undefined) user.active = dto.active;
+
+    // ✅ Cập nhật profile an toàn
+    if (dto.deliveryProfile) {
+      const profile = user.getDeliveryProfile();
+      if (profile) Object.assign(profile, dto.deliveryProfile);
+    }
+
+    if (dto.customerProfile) {
+      const profile = user.getCustomerProfile();
+      if (profile) Object.assign(profile, dto.customerProfile);
+    }
+
+    if (dto.staffProfile) {
+      const profile = user.getStaffProfile();
+      if (profile) Object.assign(profile, dto.staffProfile);
+    }
+
+    return user;
+  }
 
 }
 

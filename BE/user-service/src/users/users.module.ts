@@ -15,6 +15,7 @@ import { GetUserByIdUseCase } from './application/use-cases/getUserById.usecase'
 import { SearchUserUseCase } from './application/use-cases/searchUser.usecase';
 import { GetUserByEmailUseCase } from './application/use-cases/getUserByEmail.usecase';
 import { DeletedUsersUseCase } from './application/use-cases/deleteUser.usecase';
+import { UpdateUserUseCase } from './application/use-cases/updateUser.usecase';
 
 @Module({ 
   imports: [
@@ -39,7 +40,6 @@ import { DeletedUsersUseCase } from './application/use-cases/deleteUser.usecase'
   ],
   controllers: [UserController],
   providers: [
-    CreateUserUseCase,
     {
       provide: USER_REPOSITORY,   // token là interface
       useClass: UserRepositoryImpl, // class thực tế
@@ -50,7 +50,9 @@ import { DeletedUsersUseCase } from './application/use-cases/deleteUser.usecase'
     GetUserByEmailUseCase,
     SearchUserUseCase,
     DeletedUsersUseCase,
+    CreateUserUseCase,
+    UpdateUserUseCase,
   ],
-  exports: [CreateUserUseCase],
+  exports: [CreateUserUseCase, UpdateUserUseCase, GetUserByIdUseCase, GetUserByEmailUseCase, SearchUserUseCase, DeletedUsersUseCase],
 })
 export class UsersModule {}

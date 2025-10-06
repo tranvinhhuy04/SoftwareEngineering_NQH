@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Inject, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Inject, Param, Delete, Query, Put } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 
 @Controller()
@@ -44,4 +44,8 @@ export class AppController {
     return this.userClient.send({ cmd: 'search_users' }, parsedFilters);
   }
 
+  @Put('users/update/:id')
+  updateUser(@Param('id') id: string, @Body() dto: any) {
+    return this.userClient.send({ cmd: 'update_user' }, { id, dto });
+  }
 }
