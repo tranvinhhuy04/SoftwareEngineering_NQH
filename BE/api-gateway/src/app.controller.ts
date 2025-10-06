@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Body, Inject, Param } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 
 @Controller()
@@ -9,24 +9,25 @@ export class AppController {
   ) {}
 
   // API cho user-service
-  @Post('users')
+  @Post('users/create')
   createUser(@Body() userData: any) {
     return this.userClient.send({ cmd: 'create_user' }, userData);
   }
 
-  @Get('users')
-  getUsers() {
-    return this.userClient.send({ cmd: 'get_users' }, {});
+  @Get('users/get_all')
+  getAllUsers() {
+    return this.userClient.send({ cmd: 'get_all_users' }, {});
   }
 
-  // API cho payment-service
-  @Post('payments')
-  createPayment(@Body() paymentData: any) {
-    return this.paymentClient.send({ cmd: 'create_payment' }, paymentData);
+  @Get('users/get_id/:id')
+  getUserById(@Param('id') id: string) {
+    return this.userClient.send({ cmd: 'get_user_by_id' }, id);
   }
 
-  @Get('payments')
-  getPayments() {
-    return this.paymentClient.send({ cmd: 'get_payments' }, {});
+  @Get('users/get_email/:email')
+  getUserByEmail(@Param('email') email: string) {
+    return this.userClient.send({ cmd: 'get_user_by_email' }, email);
   }
+  
+  
 }
