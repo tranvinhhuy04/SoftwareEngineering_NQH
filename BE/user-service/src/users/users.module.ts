@@ -10,6 +10,9 @@ import { DeliveryProfile, DeliveryProfileSchema } from './infrastructure/databas
 import { BcryptPasswordService } from './infrastructure/services/bcrypt-password.service';
 import { StaffProfile, StaffProfileSchema } from './infrastructure/database/staffProfile.schema';
 import { CustomerProfile, CustomerProfileSchema } from './infrastructure/database/customerProfile.schema';
+import { GetAllUsersUseCase } from './application/use-cases/getAllUsers.usecase';
+import { GetUserByIdUseCase } from './application/use-cases/getUserById.usecase';
+import { SearchUserUseCase } from './application/use-cases/searchUser.usecase';
 
 @Module({ 
   imports: [
@@ -38,9 +41,11 @@ import { CustomerProfile, CustomerProfileSchema } from './infrastructure/databas
     {
       provide: USER_REPOSITORY,   // token là interface
       useClass: UserRepositoryImpl, // class thực tế
-      
     },
     BcryptPasswordService,
+    GetAllUsersUseCase,
+    GetUserByIdUseCase,
+    SearchUserUseCase,
   ],
   exports: [CreateUserUseCase],
 })
