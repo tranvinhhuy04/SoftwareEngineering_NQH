@@ -7,13 +7,14 @@ export class CustomerMapper {
     if (!customerDoc) return null;
 
     return new CustomerProfileEntity(
-      customerDoc._id,
       customerDoc.ID,
       customerDoc.user,
       customerDoc.defaultAddress ?? "",
       customerDoc.preferredPaymentMethod ?? "",
       customerDoc.savedPaymentMethods ?? [],
-      customerDoc.favoriteItems ?? []
+      customerDoc.favoriteItems ?? [],
+      customerDoc._id,
+
     );
   }
 

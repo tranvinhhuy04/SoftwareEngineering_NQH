@@ -7,12 +7,13 @@ export class StaffMapper {
         if (!staffDoc) return null;
 
         return new StaffProfileEntity(
-            staffDoc._id,
             staffDoc.ID,
             staffDoc.user,
             staffDoc.shift,
             staffDoc.isActive,
-            staffDoc.handledOrders
+            staffDoc.handledOrders,
+            staffDoc._id,
+
         );
     }
 

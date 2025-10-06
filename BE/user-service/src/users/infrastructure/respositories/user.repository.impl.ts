@@ -31,11 +31,6 @@ export class UserRepositoryImpl implements IUserRepository {
     private readonly staffProfileModel: Model<StaffProfileDocument>
   ) {}
 
-  // CRUD chưa implement   //
-  findByFilters(filters: any): Promise<UserEntity[]> {
-    throw new Error("Method not implemented.");
-  }
-
   // SAVE USER + PROFILE   //
   async save(user: UserEntity): Promise<UserEntity> {
     try {
@@ -220,6 +215,48 @@ export class UserRepositoryImpl implements IUserRepository {
     }
   }
 
+  // FIND BY FILTERS      //
+  async findByFilters(filters: any): Promise<UserEntity[]> {
+    try {
+      const { name, email, userType, active, page = 1, limit = 10, ...profileFilters } = filters;
+      const query: Record<string, any> = {};
+
+      if (name) query.name = { $regex: name, $options: 'i' };
+      if (email) query.email = { $regex: email, $options: 'i' };
+      if (userType) query.userType = userType;
+      if (active) query.active = active;
+
+      // 🧩 Nếu có filter nằm trong profile
+      if (userType && Object.keys(profileFilters).length > 0) {
+        const userIds = await this.findUserIdsByProfile(userType, profileFilters);
+        if (userIds.length === 0) return [];
+        query._id = { $in: userIds };
+      }
+
+      const pageNum = Number.isInteger(+page) && +page > 0 ? +page : 1;
+      const limitNum = Number.isInteger(+limit) && +limit > 0 ? +limit : 10;
+      const skip = (pageNum - 1) * limitNum;
+      this.logger.debug(`Pagination → page=${pageNum}, limit=${limitNum}, skip=${skip}`);
+
+
+      const [userDocs, total] = await Promise.all([
+      this.userModel.find(query).skip(skip).limit(limitNum).exec(),
+      this.userModel.countDocuments(query).exec(),
+    ]);
+
+
+      if (!userDocs.length) return [];
+
+      const users = await Promise.all(userDocs.map((doc) => this.attachProfile(doc)));
+      this.logger.debug(`Found ${users.length}/${total} users`);
+      return users;
+    } catch (error) {
+      this.logger.error(`Error finding users by filters: ${error.message}`);
+      throw new Error(`Error finding users by filters: ${error.message}`);
+    }
+  }
+
+
   // HELPERS              //
     private async attachProfile(userDoc: UserDocument): Promise<UserEntity> {
     const user = UserMapper.toEntity(userDoc);
@@ -254,4 +291,24 @@ export class UserRepositoryImpl implements IUserRepository {
 
     return user;
   }
+
+  private async findUserIdsByProfile(userType: UserType, profileFilters: any): Promise<string[]> {
+    const modelMap = {
+      [UserType.DELIVERY]: this.deliveryModel,
+      [UserType.CUSTOMER]: this.customerProfileModel,
+      [UserType.STAFF]: this.staffProfileModel,
+    };
+
+    const profileModel = modelMap[userType];
+    if (!profileModel) return [];
+
+    // Lọc bằng các field trong profile
+    const profileDocs = await profileModel.find(profileFilters, { user: 1 }).exec();
+    const userIds = profileDocs.map((doc) => doc.user.toString());
+    this.logger.debug(
+      `Found ${userIds.length} userIds from ${userType} profiles with filters=${JSON.stringify(profileFilters)}`
+    );
+    return userIds;
+  }
+
 }

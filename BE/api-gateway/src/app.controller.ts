@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Inject, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Inject, Param, Delete, Query } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 
 @Controller()
@@ -32,6 +32,16 @@ export class AppController {
   @Delete('users/delete/:id')
   deleteUser(@Param('id') id: string) {
     return this.userClient.send({ cmd: 'deleted_user' }, id);
+  }
+
+  @Post('users/search')
+  searchUsers(@Body() filters: any) {
+    const parsedFilters = {
+      ...filters,
+      page: parseInt(filters.page) || 1,
+      limit: parseInt(filters.limit) || 10,
+    };
+    return this.userClient.send({ cmd: 'search_users' }, parsedFilters);
   }
 
 }

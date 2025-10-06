@@ -9,11 +9,12 @@ export class DeliveryMapper {
             if (!deliveryDoc) return null;
 
             return new DeliveryProfileEntity(
-                deliveryDoc._id,
                 deliveryDoc.ID,
                 deliveryDoc.user,
                 deliveryDoc.available,
-                deliveryDoc.vehicle_info
+                deliveryDoc.vehicle_info,
+                deliveryDoc._id,
+
             );
         }
 
