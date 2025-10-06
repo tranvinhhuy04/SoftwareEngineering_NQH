@@ -7,7 +7,6 @@ import { StaffProfileEntity } from "./staffProfile.entity";
 
 export class UserEntity {
   constructor(
-    private readonly _id: Types.ObjectId,
     public readonly ID: string,
     public name: string,
     public email: string,
@@ -19,7 +18,8 @@ export class UserEntity {
     public active: UserActive = UserActive.ACTIVE,
     private customerProfile?: CustomerProfileEntity,
     private staffProfile?: StaffProfileEntity,
-    private deliveryProfile?: DeliveryProfileEntity
+    private deliveryProfile?: DeliveryProfileEntity,
+    private _id?: Types.ObjectId,
   ) {}
 
   // --- Domain Logic ---

@@ -2,16 +2,14 @@ import { Types } from "mongoose";
 
 export class CustomerProfileEntity {
   constructor(
-    private readonly _id: Types.ObjectId,
     public readonly ID: string,
     public readonly userId: Types.ObjectId,
     public defaultAddress?: string,
     public preferredPaymentMethod?: string,
     public savedPaymentMethods: string[] = [],
     public favoriteItems: string[] = [],
+    private readonly _id?: Types.ObjectId,
   ) {}
 
-  get_Id(): Types.ObjectId {
-    return this._id;
-  }
+  get_Id(){ return this._id; }
 }
