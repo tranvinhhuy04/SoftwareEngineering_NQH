@@ -10,17 +10,19 @@ import { Vehicle } from "src/users/domain/enum/delivery-vehicle.enum";
 
 export class UserMapper {
   // Document -> Entity
-  static docToEntity(userDoc: any): UserEntity {
+  static toEntity(userDoc: any): UserEntity {
     const user = new UserEntity(
-      userDoc._id,
       userDoc.ID,
       userDoc.name,
       userDoc.email,
       userDoc.password,
       userDoc.phone,
       userDoc.address,
+      userDoc.avatar,
       userDoc.userType,
-      userDoc.active
+      userDoc.active,
+      userDoc._id,
+
     );
     return user;
   }
@@ -34,6 +36,7 @@ export class UserMapper {
       password: user.password,
       phone: user.phone,
       address: user.address,
+      avatar: user.avatar,
       userType: user.userType,
       active: user.active,
     };
@@ -42,7 +45,6 @@ export class UserMapper {
   // DTO -> Entity
   static mapperUserDtoToEntity(dto: CreateUserDto, userId: string): UserEntity {
     const user = new UserEntity(
-      new Types.ObjectId(), // hoặc nhận từ Use Case
       userId,
       dto.name,
       dto.email,
@@ -52,6 +54,7 @@ export class UserMapper {
       dto.avatar || '',
       dto.userType ?? UserType.CUSTOMER,
       dto.active ?? UserActive.ACTIVE,
+      undefined, 
 
     );
     return user;

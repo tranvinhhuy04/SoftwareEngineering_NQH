@@ -19,7 +19,7 @@ export class DeliveryMapper {
 
     static toDeliveryPersistence(detail: any, user: UserEntity): any {
         return {
-            _id: new Types.ObjectId(),
+            _id: detail.get_Id(),
             ID: detail.ID,
             user: user.get_Id(),
             available: detail.available,
@@ -29,11 +29,11 @@ export class DeliveryMapper {
 
     static mapperDeliveryDtoToEntity(dto: any, user: UserEntity, deliveryProfileID: string): DeliveryProfileEntity {
         return new DeliveryProfileEntity(
-            new Types.ObjectId(), // hoặc nhận từ Use Case
             deliveryProfileID,
-            user.get_Id(),
+            user.get_Id() ?? new Types.ObjectId(),
             dto.available ?? Available.ASSIGN,
-            dto.vehicle_info ?? Vehicle.MOTORBIKE
+            dto.vehicle_info ?? Vehicle.MOTORBIKE,
+            undefined,
         );
     }
 

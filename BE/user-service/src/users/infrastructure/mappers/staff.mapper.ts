@@ -29,12 +29,12 @@ export class StaffMapper {
 
     static mapperStaffDtoToEntity(dto: any, user: UserEntity, staffProfileID: string): StaffProfileEntity {
         return new StaffProfileEntity(
-        new Types.ObjectId(), // hoặc nhận từ Use Case
         staffProfileID,
-        user.get_Id(),
+        user.get_Id() ?? new Types.ObjectId(),
         dto.shift || '',
         dto.isActive || true,
         dto.handledOrders || 0,
+        undefined,
         );
     }
 }

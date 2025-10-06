@@ -119,7 +119,7 @@ describe('UserMapper', () => {
       active: 'ACTIVE',
     };
 
-    const user = UserMapper.docToEntity(userDoc);
+    const user = UserMapper.toEntity(userDoc);
     expect(user).toBeInstanceOf(UserEntity);
     expect(user.getDeliveryProfile()).toBeDefined();
   });

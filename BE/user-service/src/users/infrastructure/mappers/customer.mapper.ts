@@ -31,13 +31,13 @@ export class CustomerMapper {
 
   static mapperCustomerDtoToEntity(dto: any, user: UserEntity, customerProfileID: string): CustomerProfileEntity {
     return new CustomerProfileEntity(
-      new Types.ObjectId(),
       customerProfileID,
-      user.get_Id(),
+      user.get_Id() ?? new Types.ObjectId(),
       dto.defaultAddress ?? "",
       dto.preferredPaymentMethod ?? "",
       dto.savedPaymentMethods ?? [],
-      dto.favoriteItems ?? []
+      dto.favoriteItems ?? [],
+      undefined,
     );
   }
 }
