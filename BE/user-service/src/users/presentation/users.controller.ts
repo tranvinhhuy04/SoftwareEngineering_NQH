@@ -6,6 +6,7 @@ import { UserEntity } from "../domain/entities/user.entity";
 import { GetAllUsersUseCase } from "../application/use-cases/getAllUsers.usecase";
 import { GetUserByIdUseCase } from "../application/use-cases/getUserById.usecase";
 import { SearchUserUseCase } from "../application/use-cases/searchUser.usecase";
+import { GetUserByEmailUseCase } from "../application/use-cases/getUserByEmail.usecase";
 
 @Controller()
 export class UserController {
@@ -13,6 +14,7 @@ export class UserController {
     private readonly createUserUseCase: CreateUserUseCase,
     private readonly getAllUsersUseCase: GetAllUsersUseCase,
     private readonly getUserByIdUseCase: GetUserByIdUseCase,
+    private readonly getUserByEmailUseCase: GetUserByEmailUseCase,
     private readonly searchUserUseCase: SearchUserUseCase,
   
   ) {}
@@ -32,5 +34,9 @@ export class UserController {
     return this.getUserByIdUseCase.execute(userId);
   }
 
-  
+  @MessagePattern({ cmd: 'get_user_by_email' })
+  async getUserByEmail(@Payload() email: string): Promise<UserEntity> {
+    return this.getUserByEmailUseCase.execute(email);
+  }
+
 }

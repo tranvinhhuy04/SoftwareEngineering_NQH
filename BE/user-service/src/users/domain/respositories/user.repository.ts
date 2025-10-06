@@ -5,5 +5,6 @@ export interface IUserRepository {
   findById(id: string): Promise<UserEntity | null>;
   findByEmail(email: string): Promise<UserEntity | null>;
   findAll(): Promise<UserEntity[]>;
+  findByFilters(filters: any): Promise<UserEntity[]>;
   remove(id: string): Promise<void>;
 }

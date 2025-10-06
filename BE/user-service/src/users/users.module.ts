@@ -13,6 +13,7 @@ import { CustomerProfile, CustomerProfileSchema } from './infrastructure/databas
 import { GetAllUsersUseCase } from './application/use-cases/getAllUsers.usecase';
 import { GetUserByIdUseCase } from './application/use-cases/getUserById.usecase';
 import { SearchUserUseCase } from './application/use-cases/searchUser.usecase';
+import { GetUserByEmailUseCase } from './application/use-cases/getUserByEmail.usecase';
 
 @Module({ 
   imports: [
@@ -45,6 +46,7 @@ import { SearchUserUseCase } from './application/use-cases/searchUser.usecase';
     BcryptPasswordService,
     GetAllUsersUseCase,
     GetUserByIdUseCase,
+    GetUserByEmailUseCase,
     SearchUserUseCase,
   ],
   exports: [CreateUserUseCase],

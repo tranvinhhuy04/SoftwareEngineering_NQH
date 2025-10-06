@@ -169,7 +169,7 @@ export class UserRepositoryImpl implements IUserRepository {
 
   async findByEmail(email: string): Promise<UserEntity | null> {
     try {
-      return await this.findOneByFilter({ email });
+      return await this.findOneByFilter({ email:email });
     } catch (error) {
       this.logger.error(`Error finding user by email ${email}: ${error.message}`);
       throw error;
