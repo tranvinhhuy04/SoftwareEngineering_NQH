@@ -14,6 +14,7 @@ import { GetAllUsersUseCase } from './application/use-cases/getAllUsers.usecase'
 import { GetUserByIdUseCase } from './application/use-cases/getUserById.usecase';
 import { SearchUserUseCase } from './application/use-cases/searchUser.usecase';
 import { GetUserByEmailUseCase } from './application/use-cases/getUserByEmail.usecase';
+import { DeletedUsersUseCase } from './application/use-cases/deleteUser.usecase';
 
 @Module({ 
   imports: [
@@ -48,6 +49,7 @@ import { GetUserByEmailUseCase } from './application/use-cases/getUserByEmail.us
     GetUserByIdUseCase,
     GetUserByEmailUseCase,
     SearchUserUseCase,
+    DeletedUsersUseCase,
   ],
   exports: [CreateUserUseCase],
 })

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Inject, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Inject, Param, Delete } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 
 @Controller()
@@ -29,5 +29,9 @@ export class AppController {
     return this.userClient.send({ cmd: 'get_user_by_email' }, email);
   }
   
-  
+  @Delete('users/delete/:id')
+  deleteUser(@Param('id') id: string) {
+    return this.userClient.send({ cmd: 'deleted_user' }, id);
+  }
+
 }

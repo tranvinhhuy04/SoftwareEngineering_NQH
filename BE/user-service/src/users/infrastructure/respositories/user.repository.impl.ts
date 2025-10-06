@@ -32,8 +32,7 @@ export class UserRepositoryImpl implements IUserRepository {
   ) {}
 
   // CRUD chưa implement   //
-
-  remove(id: string): Promise<void> {
+  findByFilters(filters: any): Promise<UserEntity[]> {
     throw new Error("Method not implemented.");
   }
 
@@ -176,74 +175,48 @@ export class UserRepositoryImpl implements IUserRepository {
     }
   }
 
-// FIND BY FILTERS       //
-  async findByFilters(filters: any): Promise<UserEntity[]> {
+  // DELETE USER           //
+  async remove(id: string): Promise<void> {
     try {
-      const query: any = {};
-
-      if (filters.name) query.name = { $regex: filters.name, $options: "i" };
-      if (filters.email) query.email = { $regex: filters.email, $options: "i" };
-      if (filters.userType) query.userType = filters.userType;
-      if (filters.active) query.active = filters.active;
-
-      const page = Number(filters.page) > 0 ? Number(filters.page) : 1;
-      const limit = Number(filters.limit) > 0 ? Number(filters.limit) : 10;
-      const skip = (page - 1) * limit;
-
-      this.logger.debug(`Searching users with filters: ${JSON.stringify(query)} (page=${page}, limit=${limit})`);
-
-      const userDocs = await this.userModel
-        .find(query)
-        .skip(skip)
-        .limit(limit)
-        .exec();
-
-      if (!userDocs || userDocs.length === 0) return [];
-
-      const users: UserEntity[] = [];
-
-      for (const userDoc of userDocs) {
-        const userEntity = UserMapper.toEntity(userDoc);
-
-        switch (userDoc.userType) {
-          case UserType.DELIVERY: {
-            const deliveryDoc = await this.deliveryModel.findOne({ user: userDoc._id }).exec();
-            if (deliveryDoc) {
-              const deliveryEntity = DeliveryMapper.toEntity(deliveryDoc);
-              if (deliveryEntity) {
-                userEntity.assignDeliveryProfile(deliveryEntity);
-              }
-            }
-            break;
+      const user = await this.userModel.findOne({ ID: id }).exec();
+      if (!user) {
+        this.logger.warn(`User with ID ${id} not found for deletion`);
+        return;
+      }
+      
+      switch (user.userType) {
+        case UserType.DELIVERY:
+          try {
+            await this.deliveryModel.deleteOne({ user: user._id }).exec();
+          } catch (error) {
+            this.logger.error(`Error deleting delivery profile for user ID ${id}: ${error.message}`);
           }
-          case UserType.CUSTOMER: {
-            const customerDoc = await this.customerProfileModel.findOne({ user: userDoc._id }).exec();
-            if (customerDoc) {
-              const customerEntity = CustomerMapper.toEntity(customerDoc);
-              if (customerEntity) {
-                userEntity.assignCustomerProfile(customerEntity);
-              }
-            }
-            break;
+          this.logger.debug(`Deleted delivery profile for user ID ${id}`);
+          break;
+        case UserType.CUSTOMER:
+          try {
+            await this.customerProfileModel.deleteOne({ user: user._id }).exec();
+          } catch (error) {
+            this.logger.error(`Error deleting customer profile for user ID ${id}: ${error.message}`);
           }
-          case UserType.STAFF: {
-            const staffDoc = await this.staffProfileModel.findOne({ user: userDoc._id }).exec();
-            if (staffDoc) {
-              const staffEntity = StaffMapper.toEntity(staffDoc);
-              if (staffEntity)
-                userEntity.assignStaffProfile(staffEntity);
-            }
-            break;
+          this.logger.debug(`Deleted customer profile for user ID ${id}`);
+          break;
+        case UserType.STAFF:
+          try {
+            await this.staffProfileModel.deleteOne({ user: user._id }).exec();
+          } catch (error) {
+            this.logger.error(`Error deleting staff profile for user ID ${id}: ${error.message}`);
           }
-        }
-
-        users.push(userEntity);
+          this.logger.debug(`Deleted staff profile for user ID ${id}`);
+          break;
       }
 
-      return users;
+      await this.userModel.deleteOne({ _id: user._id }).exec();
+      this.logger.debug(`Deleted user with ID ${id}`);
+
     } catch (error) {
-      this.logger.error(`Error finding users by filters: ${error.message}`);
-      throw new Error(`Error finding users by filters: ${error.message}`);
+      this.logger.error(`Error deleting user by ID ${id}: ${error.message}`);
+      throw error;
     }
   }
 
