@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { UsersModule } from './users/users.module';
+import { UserLoggerService } from './users/common/logger/custom-logger.service';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { UsersModule } from './users/users.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const mongoUri = configService.get<string>('MONGO_URI');
-        return { uri: mongoUri }; // phải trả về object { uri: string }
+        return { uri: mongoUri }; 
       },
     }),
 
@@ -43,5 +44,7 @@ import { UsersModule } from './users/users.module';
 
     UsersModule,
   ],
+  providers: [UserLoggerService],
+  exports: [UserLoggerService],
 })
 export class AppModule {}
