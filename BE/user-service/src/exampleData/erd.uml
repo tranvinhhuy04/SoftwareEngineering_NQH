@@ -6,26 +6,32 @@ caption Các thuộc tính được thiết kế dựa trên yêu cầu người
 ' ENUMS
 ' ==========================
 enum UserType {
-  CUSTOMER
-  RESTAURANT_ADMIN
-  RESTAURANT_STAFF
-  DELIVERY_PERSON
+  customer
+  restaurant_admin
+  restaurant_staff
+  delivery-person
 }
 
 enum Available {
-  ASSIGN,
-  UNASSIGN
+  assign,
+  unassign
 }
 
 enum Vehicle {
-  CAR,
-  MOTORBIKE,
-  BIKE,
+  car,
+  motorbike,
+  bike,
 }
 
 enum UserActive {
-  ACTIVE
-  INACTIVE
+  active
+  inactive
+}
+
+enum StaffShift {
+  morning
+  afternoon
+  night
 }
 
 ' ==========================
