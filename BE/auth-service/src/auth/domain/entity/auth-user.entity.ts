@@ -1,13 +1,14 @@
-export class AuthUser {
-  constructor(
-    private readonly userId: string,
-    private readonly email: string,
-    private readonly roles: string[],
-    private readonly active: boolean,
-  ) {}
+import { Schema, model, Document } from 'mongoose';
 
-  getId() { return this.userId; }
-  getEmail() { return this.email; }
-  getRoles() { return this.roles; }
-  isActive() { return this.active; }
+export class UserAuth {
+  constructor(
+    public readonly id: string,
+    public readonly userId: string,        // Liên kết với User Service
+    public readonly email: string,
+    public readonly passwordHash: string,
+    public readonly salt: string,
+    public readonly isActive: boolean,
+    public readonly createdAt: Date,
+    public readonly updatedAt: Date,
+  ) {}
 }
