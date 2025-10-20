@@ -1,0 +1,129 @@
+@startuml
+title User Aggregate - FastBite (Single Store)
+caption Các thuộc tính được thiết kế dựa trên yêu cầu người dùng trong phần User Story & MoSCoW
+
+' ==========================
+' ENUMS
+' ==========================
+enum UserType {
+  CUSTOMER
+  RESTAURANT_ADMIN
+  RESTAURANT_STAFF
+  DELIVERY_PERSON
+}
+
+enum Available {
+  ASSIGN,
+  UNASSIGN
+}
+
+enum Vehicle {
+  CAR,
+  MOTORBIKE,
+  BIKE,
+}
+
+enum UserActive {
+  ACTIVE
+  INACTIVE
+}
+
+' ==========================
+' USER ENTITY (AGGREGATE ROOT)
+' ==========================
+class UserEntity {
+  - _id: ObjectId
+  + ID: string
+  + name: string
+  + email: string
+  + password: string
+  + phone: string
+  + address: string
+  + userType: UserType
+  + active: UserActive
+  --
+  - customerProfile: CustomerProfileEntity
+  - staffProfile: StaffProfileEntity
+  - deliveryDetail: DeliveryDetailEntity
+  --
+  + assignCustomerProfile(profile: CustomerProfileEntity)
+  + assignStaffProfile(profile: StaffProfileEntity)
+  + assignDeliveryDetail(detail: DeliveryDetailEntity)
+  + getCustomerProfile(): CustomerProfileEntity
+  + getStaffProfile(): StaffProfileEntity
+  + getDeliveryDetail(): DeliveryDetailEntity
+}
+
+note right of UserEntity
+📘 Thuộc User Stories:
+- US14: Khách hàng đăng nhập/đăng ký (Must have)
+- US15: Admin đăng nhập quản trị (Must have)
+- US12: Quản lý tình trạng món ăn (liên quan tới STAFF)
+Thuộc tính:
+• name, email, password, phone, address → US14 (đăng ký)
+• userType → US14, US15 (phân quyền truy cập)
+• active → quản trị viên có thể bật/tắt user
+end note
+
+' ==========================
+' SUB-ENTITIES
+' ==========================
+class CustomerProfileEntity {
+  + defaultAddress: string
+  + preferredPaymentMethod: string
+  + savedPaymentMethods: string[]
+  + favoriteItems: string[]
+}
+
+note right of CustomerProfileEntity
+📗 Thuộc User Stories:
+- US9: Thanh toán trực tuyến (Must have)
+- US10: Nhận email xác nhận đơn hàng
+- US11: Lưu thông tin thanh toán mặc định (Should have)
+- US4: Đánh dấu món yêu thích (Could have)
+Thuộc tính:
+• defaultAddress → US9 (địa chỉ giao hàng)
+• preferredPaymentMethod → US11 (phương thức mặc định)
+• savedPaymentMethods → US9, US11
+• favoriteItems → US4 (món yêu thích)
+end note
+
+
+class StaffProfileEntity {
+  + shift: string
+  + isActive: boolean
+  + handledOrders: number
+}
+
+note right of StaffProfileEntity
+📙 Thuộc User Stories:
+- US12: Quản lý tình trạng món ăn (Must have)
+- US13: Cập nhật tồn kho theo thời gian thực (Should have)
+Thuộc tính:
+• shift → quản lý ca làm việc
+• handledOrders → thống kê hiệu suất nhân viên
+end note
+
+
+class DeliveryDetailEntity {
+  + available: boolean
+  + vehicle_info: string
+}
+
+note right of DeliveryDetailEntity
+📕 Thuộc User Stories:
+- US5–US10 (quy trình đặt hàng → giao hàng)
+- US9: Thanh toán trực tuyến (liên quan đến COD)
+Thuộc tính:
+• available → trạng thái sẵn sàng giao hàng
+• vehicle_info → phương tiện giao hàng (xe máy, xe đạp,...)
+end note
+
+' ==========================
+' RELATIONSHIPS
+' ==========================
+UserEntity "1" *-- "0..1" CustomerProfileEntity : owns >
+UserEntity "1" *-- "0..1" StaffProfileEntity : owns >
+UserEntity "1" *-- "0..1" DeliveryDetailEntity : owns >
+
+@enduml
