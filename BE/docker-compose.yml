@@ -47,29 +47,16 @@ services:
       - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
     restart: always
 
-  user-service:
-    build: ./user-service
-    container_name: user-service
+    product-service:
+    build: ./product-service
+    container_name: product-service
     depends_on:
       mongodb:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
     environment:
-      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/purely_auth_service?retryWrites=true&w=majority&appName=tyty
-      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
-    restart: always
-
-  payment-service:
-    build: ./payment-service
-    container_name: payment-service
-    depends_on:
-      mongodb:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/purely_cart_service?retryWrites=true&w=majority&appName=tyty
+      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/product_service?retryWrites=true&w=majority&appName=tyty
       - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
     restart: always
 
@@ -78,4 +65,4 @@ volumes:
 
 networks:
   default:
-    name: fastfood_network
+    name: fastfood_network_
