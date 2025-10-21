@@ -7,7 +7,8 @@ export class AppController {
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
     @Inject('PAYMENT_SERVICE') private readonly paymentClient: ClientProxy,
     @Inject('PRODUCT_SERVICE') private readonly productClient: ClientProxy, // ✅ thêm
-  ) {}
+    @Inject('ORDER_SERVICE') private readonly orderClient: ClientProxy,
+  ) { }
 
   // ===== USER SERVICE =====
   @Post('users')
@@ -55,5 +56,16 @@ export class AppController {
   @Delete('products/:id')
   deleteProduct(@Param('id') id: number) {
     return this.productClient.send({ cmd: 'delete_product' }, { id });
+  }
+
+  // ===== ORDER SERVICE =====
+  @Post('orders')
+  createOrder(@Body() data: { productId: number; quantity: number }) {
+    return this.orderClient.send({ cmd: 'create_order' }, data);
+  }
+
+  @Get('orders')
+  getOrders() {
+    return this.orderClient.send({ cmd: 'get_orders' }, {});
   }
 }

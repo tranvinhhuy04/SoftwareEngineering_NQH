@@ -33,9 +33,18 @@ import { AppService } from './app.service';
           queueOptions: { durable: false },
         },
       },
+      {
+        name: 'ORDER_SERVICE',
+        transport: Transport.RMQ,
+        options: {
+          urls: [process.env.RABBITMQ_URI || 'amqp://localhost:5672'],
+          queue: 'orders_queue',
+          queueOptions: { durable: false },
+        },
+      },
     ]),
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
