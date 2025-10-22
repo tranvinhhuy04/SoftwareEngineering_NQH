@@ -60,7 +60,7 @@ export class AppController {
 
   // ===== ORDER SERVICE =====
   @Post('orders')
-  createOrder(@Body() data: { productId: number; quantity: number }) {
+  createOrder(@Body() data: any) {
     return this.orderClient.send({ cmd: 'create_order' }, data);
   }
 
