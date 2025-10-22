@@ -1,5 +1,3 @@
-import { Types } from 'mongoose';
-
 export class RefreshToken {
   constructor(
     public readonly tokenId: string,

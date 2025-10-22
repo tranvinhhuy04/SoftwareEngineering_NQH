@@ -26,6 +26,7 @@ export class UserController {
 
   @MessagePattern({ cmd: 'create_user' })
   async createUser(@Payload() dto: CreateUserDto): Promise<UserEntity> {
+    console.log('📩 Received create_user message:', dto);
     return this.createUserUseCase.execute(dto);
   }
 

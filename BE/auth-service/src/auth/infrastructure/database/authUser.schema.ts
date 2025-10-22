@@ -3,7 +3,7 @@ import { Prop, SchemaFactory, Schema } from '@nestjs/mongoose';
 export type AuthUserDocument = AuthUserSchema & Document;
 
 @Schema({ timestamps: true , collection: 'auth_users' })
-export class AuthUserSchema extends Document {
+export class AuthUserSchema {
     @Prop({ required: true, unique: true })
     userId: string;
 

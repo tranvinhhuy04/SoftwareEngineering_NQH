@@ -24,6 +24,15 @@ import { AppService } from './app.service';
           queueOptions: { durable: false },
         },
       },
+      {
+        name: 'AUTH_SERVICE',
+        transport: Transport.RMQ,
+        options: {
+          urls: [process.env.RABBITMQ_URI || 'amqp://localhost:5672'],
+          queue: 'auth_queue',
+          queueOptions: { durable: false },
+        },
+      },
     ]),
   ],
   controllers: [AppController],

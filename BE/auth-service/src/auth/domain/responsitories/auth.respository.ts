@@ -1,5 +1,6 @@
-export interface AuthRepository {
-    registerUser(email: string, passwordHash: string): Promise<string>;
-    loginUser(email: string, password: string): Promise<string>;
-    logoutUser(userId: string): Promise<void>;
+import { UserAuth } from "../entity/auth-user.entity";
+
+export interface IUserAuthRepository  {
+    findByEmail(email: string): Promise<UserAuth | null>;
+    save(user: UserAuth): Promise<UserAuth>;
 }

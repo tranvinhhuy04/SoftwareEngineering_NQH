@@ -6,6 +6,7 @@ export class AppController {
   constructor(
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
     @Inject('PAYMENT_SERVICE') private readonly paymentClient: ClientProxy,
+    @Inject('AUTH_SERVICE') private readonly authClient: ClientProxy,
   ) {}
 
   // API cho user-service
@@ -47,5 +48,13 @@ export class AppController {
   @Put('users/update/:id')
   updateUser(@Param('id') id: string, @Body() dto: any) {
     return this.userClient.send({ cmd: 'update_user' }, { id, dto });
+  }
+
+  @Post('auth/register')
+  registerUser(@Body() registerData: any) {
+    
+    console.log('📤 Sending register request to AuthService', registerData);
+    // ✅ Gửi message đến AuthService
+    return this.authClient.send({ cmd: 'register' }, registerData);
   }
 }
