@@ -1,34 +1,33 @@
-import { Controller } from '@nestjs/common';
-import { MessagePattern } from '@nestjs/microservices';
+import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
 import { ProductService } from './app.service';
 import { Product } from './product.entity';
 
-@Controller()
+@Controller('products')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
-  @MessagePattern({ cmd: 'get_products' })
-  getAll(): Product[] {
+  @Get()
+  getAll() {
     return this.productService.findAll();
   }
 
-  @MessagePattern({ cmd: 'get_product' })
-  getOne(data: { id: number }): Product | undefined {
-    return this.productService.findOne(data.id);
+  @Get(':id')
+  getOne(@Param('id') id: string) {
+    return this.productService.findOne(id);
   }
 
-  @MessagePattern({ cmd: 'create_product' })
-  create(product: Product): Product {
-    return this.productService.create(product);
+  @Post()
+  create(@Body() data: Product) {
+    return this.productService.create(data);
   }
 
-  @MessagePattern({ cmd: 'update_product' })
-  update(data: { id: number; [key: string]: any }): Product | undefined {
-    return this.productService.update(data.id, data);
+  @Put(':id')
+  update(@Param('id') id: string, @Body() data: Partial<Product>) {
+    return this.productService.update(id, data);
   }
 
-  @MessagePattern({ cmd: 'delete_product' })
-  delete(data: { id: number }): boolean {
-    return this.productService.delete(data.id);
+  @Delete(':id')
+  delete(@Param('id') id: string) {
+    return this.productService.delete(id);
   }
 }
