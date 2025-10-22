@@ -13,6 +13,8 @@ import { USER_SERVICE } from './contact/services/services';
 import { AuthController } from './presentation/auth.controller';
 import { AuthUserSchema, AuthUserSchemaFactory } from './infrastructure/database/authUser.schema';
 import { UserAuthMongoRepository } from './infrastructure/repositories/auth.respository.imp';
+import { LoginUseCase } from './application/use-cases/login.usecase';
+import { JwtTokenService } from './infrastructure/services/jwt-token.service';
 
 @Module({
   imports: [
@@ -57,9 +59,14 @@ import { UserAuthMongoRepository } from './infrastructure/repositories/auth.resp
       provide: 'IUserServiceAdapter',
       useClass: UserServiceRmqAdapter,
     },
+    {
+      provide: 'ITokenService',
+      useClass: JwtTokenService,
+    },
 
     // 🧩 Use Case
     RegisterUserUseCase,
+    LoginUseCase
   ],
 
   exports: ['IUserServiceAdapter'],

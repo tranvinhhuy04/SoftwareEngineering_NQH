@@ -8,4 +8,7 @@ export class BcryptPasswordService implements IPasswordHashService {
     const salt = await bcrypt.genSalt(10);
     return bcrypt.hash(password, salt);
   }
+  async compare(raw: string, hashed: string): Promise<boolean> {
+    return bcrypt.compare(raw, hashed);
+  }
 }

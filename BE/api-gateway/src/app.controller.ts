@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Body, Inject, Param, Delete, Query, Put } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { Controller, Get, Post, Body, Inject, Param, Delete, Query, Put, Logger } from '@nestjs/common';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
+import { firstValueFrom, timeout } from 'rxjs';
 
 @Controller()
 export class AppController {
@@ -50,11 +51,34 @@ export class AppController {
     return this.userClient.send({ cmd: 'update_user' }, { id, dto });
   }
 
+
+// API cho auth service
   @Post('auth/register')
   registerUser(@Body() registerData: any) {
     
     console.log('📤 Sending register request to AuthService', registerData);
     // ✅ Gửi message đến AuthService
     return this.authClient.send({ cmd: 'register' }, registerData);
+  }
+
+  @Post('auth/login')
+  async loginUser(@Body() loginData: any) {
+    Logger.debug(`📤 Sending login -> AUTH_SERVICE with ${loginData.email}`);
+    try {
+      return await firstValueFrom(
+        this.authClient.send({ cmd: 'login_user' }, loginData).pipe(timeout(10000)),
+      );
+    } catch (err) {
+      Logger.error(`❌ Login failed: ${err.message}`);
+      throw new RpcException(err.message || 'Login failed');
+    }
+  }
+
+  @Post('auth/refresh')
+  async refreshToken(@Body() body: { refreshToken: string }) {
+    Logger.debug(`📤 Sending refresh_token -> AUTH_SERVICE`);
+    return firstValueFrom(
+      this.authClient.send({ cmd: 'refresh_token' }, body).pipe(timeout(10000)),
+    );
   }
 }
