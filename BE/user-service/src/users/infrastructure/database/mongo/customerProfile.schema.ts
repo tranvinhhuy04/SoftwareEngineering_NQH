@@ -1,5 +1,4 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Types } from "mongoose";
 import { User } from "./user.schema";
 
 export type CustomerProfileDocument = CustomerProfile & Document;
@@ -9,8 +8,8 @@ export class CustomerProfile{
     @Prop({required: true, unique: true})
     ID: string;
     
-    @Prop({ type: Types.ObjectId, ref: User.name, required: true })
-    user: Types.ObjectId;
+    @Prop({ref: User.name, required: true })
+    user: string;
 
     @Prop()
     defaultAddress: string;

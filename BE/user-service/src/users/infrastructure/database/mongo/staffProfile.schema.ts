@@ -1,4 +1,3 @@
-import { Type } from "@nestjs/common";
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Types } from "mongoose";
 import { User } from "./user.schema";
@@ -10,8 +9,8 @@ export class StaffProfile {
     @Prop({required: true, unique: true})
     ID: string;
 
-    @Prop({ type: Types.ObjectId, ref: User.name, required: true })
-    user: Types.ObjectId;
+    @Prop({ref: User.name, required: true })
+    user: string;
 
     @Prop({ required: true, default: 'MORNING' })
     shift: string;

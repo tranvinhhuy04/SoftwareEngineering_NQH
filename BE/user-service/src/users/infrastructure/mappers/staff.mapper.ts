@@ -1,41 +1,59 @@
-import { Types } from "mongoose";
 import { StaffProfileEntity } from "src/users/domain/entities/staffProfile.entity";
 import { UserEntity } from "src/users/domain/entities/user.entity";
 
 export class StaffMapper {
-    static toEntity(staffDoc: any): StaffProfileEntity | null {
-        if (!staffDoc) return null;
+  // 🧩 1️⃣ Document hoặc Row -> Entity
+  static toEntity(staff: any): StaffProfileEntity | null {
+    if (!staff) return null;
 
-        return new StaffProfileEntity(
-            staffDoc.ID,
-            staffDoc.user,
-            staffDoc.shift,
-            staffDoc.isActive,
-            staffDoc.handledOrders,
-            staffDoc._id,
+    return new StaffProfileEntity(
+      staff.ID || staff.id,
+      staff.user || staff.userId, // Mongo dùng 'user', SQL dùng 'userId'
+      staff.shift,
+      staff.isActive,
+      staff.handledOrders,
+      staff._id || staff.id || undefined
+    );
+  }
 
-        );
-    }
+  // 🧩 2️⃣ Entity -> Object để lưu DB
+  static toStaffPersistence(staff: StaffProfileEntity, user: UserEntity): any {
+    const dbType = process.env.DB_TYPE || 'mongo';
 
-    static toStaffPersistence(staff: any, user: UserEntity): any {
-        return {
-        _id: new Types.ObjectId(),
+    // MongoDB
+    if (dbType === 'mongo') {
+      return {
         ID: staff.ID,
         user: user.get_Id(),
         shift: staff.shift,
         isActive: staff.isActive,
         handledOrders: staff.handledOrders,
-        };
+      };
     }
 
-    static mapperStaffDtoToEntity(dto: any, user: UserEntity, staffProfileID: string): StaffProfileEntity {
-        return new StaffProfileEntity(
-        staffProfileID,
-        user.get_Id() ?? new Types.ObjectId(),
-        dto.shift || '',
-        dto.isActive || true,
-        dto.handledOrders || 0,
-        undefined,
-        );
-    }
+    // MySQL
+    return {
+      id: staff.ID,
+      userId: user.get_Id(),
+      shift: staff.shift,
+      isActive: staff.isActive,
+      handledOrders: staff.handledOrders,
+    };
+  }
+
+  // 🧩 3️⃣ DTO -> Entity (dùng cho CreateUserUseCase)
+  static mapperStaffDtoToEntity(
+    dto: any,
+    user: UserEntity,
+    staffProfileID: string
+  ): StaffProfileEntity {
+    return new StaffProfileEntity(
+      staffProfileID,
+      user.get_Id() as string,
+      dto.shift || null,
+      dto.isActive ?? true,
+      dto.handledOrders ?? 0,
+      undefined
+    );
+  }
 }

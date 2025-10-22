@@ -1,4 +1,3 @@
-import { Types } from "mongoose";
 import { UserType } from "../enum/user-type.enum";
 import { UserActive } from "../enum/user-active.enum";
 import { DeliveryProfileEntity } from "./deliveryProfile.entity";
@@ -7,7 +6,7 @@ import { StaffProfileEntity } from "./staffProfile.entity";
 
 export class UserEntity {
   constructor(
-    public readonly ID: string,
+    public ID: string,
     public name: string,
     public email: string,
     public password: string,
@@ -19,7 +18,7 @@ export class UserEntity {
     private customerProfile?: CustomerProfileEntity,
     private staffProfile?: StaffProfileEntity,
     private deliveryProfile?: DeliveryProfileEntity,
-    private _id?: Types.ObjectId,
+    private _id?: string,
   ) {}
 
   // --- Domain Logic ---

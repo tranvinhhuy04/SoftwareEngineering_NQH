@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { UserType } from '../../domain/enum/user-type.enum';
-import { UserActive } from '../../domain/enum/user-active.enum';
+import { UserType } from '../../../domain/enum/user-type.enum';
+import { UserActive } from '../../../domain/enum/user-active.enum';
 
 export type UserDocument = User & Document;
 

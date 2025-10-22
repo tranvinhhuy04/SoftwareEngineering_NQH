@@ -26,12 +26,15 @@
     "@nestjs/microservices": "^11.1.6",
     "@nestjs/mongoose": "^11.0.3",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/typeorm": "^11.0.0",
     "amqp-connection-manager": "^4.1.14",
     "amqplib": "^0.10.9",
+    "bcryptjs": "^2.4.3",
     "mongoose": "^8.18.1",
+    "mysql2": "^3.15.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "bcryptjs": "^2.4.3"
+    "typeorm": "^0.3.27"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -39,6 +42,7 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@types/bcryptjs": "^2.4.2",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
@@ -56,13 +60,16 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0",
-    "@types/bcryptjs": "^2.4.2"
+    "typescript-eslint": "^8.20.0"
   },
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": ".",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
@@ -74,5 +81,4 @@
     "collectCoverage": true,
     "coverageDirectory": "./coverage"
   }
-
 }

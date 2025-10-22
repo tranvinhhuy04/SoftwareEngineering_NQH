@@ -4,10 +4,10 @@ import { Model } from "mongoose";
 import { IUserRepository } from "src/users/domain/respositories/user.repository";
 import { UserEntity } from "src/users/domain/entities/user.entity";
 import { UserType } from "src/users/domain/enum/user-type.enum";
-import { User, UserDocument } from "../database/user.schema";
-import { DeliveryProfile, DeliveryProfileDocument } from "../database/deliveryProfile.schema";
-import { CustomerProfile, CustomerProfileDocument } from "../database/customerProfile.schema";
-import { StaffProfile, StaffProfileDocument } from "../database/staffProfile.schema";
+import { User, UserDocument } from "../database/mongo/user.schema";
+import { DeliveryProfile, DeliveryProfileDocument } from "../database/mongo/deliveryProfile.schema";
+import { CustomerProfile, CustomerProfileDocument } from "../database/mongo/customerProfile.schema";
+import { StaffProfile, StaffProfileDocument } from "../database/mongo/staffProfile.schema";
 import { UserMapper } from "../mappers/user.mapper";
 import { DeliveryMapper } from "../mappers/delivery.mapper";
 import { CustomerMapper } from "../mappers/customer.mapper";
@@ -46,19 +46,19 @@ export class UserRepositoryImpl implements IUserRepository {
       switch (user.userType) {
         case UserType.DELIVERY:
           if (user.getDeliveryProfile()) {
-            const deliveryObj = DeliveryMapper.toDeliveryPersistence(user.getDeliveryProfile(), user);
+            const deliveryObj = DeliveryMapper.toDeliveryPersistence(user.getDeliveryProfile()!, user);
             await this.deliveryModel.updateOne({ user: updatedUserDoc._id }, deliveryObj, { upsert: true });
           }
           break;
         case UserType.CUSTOMER:
           if (user.getCustomerProfile()) {
-            const customerObj = CustomerMapper.toCustomerPersistence(user.getCustomerProfile(), user);
+            const customerObj = CustomerMapper.toCustomerPersistence(user.getCustomerProfile()!, user);
             await this.customerModel.updateOne({ user: updatedUserDoc._id }, customerObj, { upsert: true });
           }
           break;
         case UserType.STAFF:
           if (user.getStaffProfile()) {
-            const staffObj = StaffMapper.toStaffPersistence(user.getStaffProfile(), user);
+            const staffObj = StaffMapper.toStaffPersistence(user.getStaffProfile()!, user);
             await this.staffModel.updateOne({ user: updatedUserDoc._id }, staffObj, { upsert: true });
           }
           break;
@@ -99,19 +99,19 @@ export class UserRepositoryImpl implements IUserRepository {
       switch (user.userType) {
         case UserType.DELIVERY:
           if (user.getDeliveryProfile()) {
-            const deliveryObj = DeliveryMapper.toDeliveryPersistence(user.getDeliveryProfile(), user);
+            const deliveryObj = DeliveryMapper.toDeliveryPersistence(user.getDeliveryProfile()!, user);
             await this.deliveryModel.updateOne({ user: user.get_Id() }, deliveryObj, { upsert: true });
           }
           break;
         case UserType.CUSTOMER:
           if (user.getCustomerProfile()) {
-            const customerObj = CustomerMapper.toCustomerPersistence(user.getCustomerProfile(), user);
+            const customerObj = CustomerMapper.toCustomerPersistence(user.getCustomerProfile()!, user);
             await this.customerModel.updateOne({ user: user.get_Id() }, customerObj, { upsert: true });
           }
           break;
         case UserType.STAFF:
           if (user.getStaffProfile()) {
-            const staffObj = StaffMapper.toStaffPersistence(user.getStaffProfile(), user);
+            const staffObj = StaffMapper.toStaffPersistence(user.getStaffProfile()!, user);
             await this.staffModel.updateOne({ user: user.get_Id() }, staffObj, { upsert: true });
           }
           break;

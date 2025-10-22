@@ -1,41 +1,58 @@
-import { Types } from "mongoose";
 import { DeliveryProfileEntity } from "src/users/domain/entities/deliveryProfile.entity";
 import { UserEntity } from "src/users/domain/entities/user.entity";
 import { Available } from "src/users/domain/enum/delivery-available.enum";
 import { Vehicle } from "src/users/domain/enum/delivery-vehicle.enum";
 
 export class DeliveryMapper {
-        static toEntity(deliveryDoc: any): DeliveryProfileEntity | null {
-            if (!deliveryDoc) return null;
-
-            return new DeliveryProfileEntity(
-                deliveryDoc.ID,
-                deliveryDoc.user,
-                deliveryDoc.available,
-                deliveryDoc.vehicle_info,
-                deliveryDoc._id,
-
-            );
-        }
-
-    static toDeliveryPersistence(detail: any, user: UserEntity): any {
-        return {
-            _id: detail.get_Id(),
-            ID: detail.ID,
-            user: user.get_Id(),
-            available: detail.available,
-            vehicle_info: detail.vehicle_info,
-        };
+  // 🧩 1️⃣ Document / Row → Entity
+    static toEntity(input: any): DeliveryProfileEntity {
+    if (!input) throw new Error("DeliveryMapper.toEntity() received null input");
+    return new DeliveryProfileEntity(
+        input.ID || input.id,
+        input.user || input.userId,
+        input.available,
+        input.vehicle_info,
+        input._id || input.id || undefined
+    );
     }
 
-    static mapperDeliveryDtoToEntity(dto: any, user: UserEntity, deliveryProfileID: string): DeliveryProfileEntity {
-        return new DeliveryProfileEntity(
-            deliveryProfileID,
-            user.get_Id() ?? new Types.ObjectId(),
-            dto.available ?? Available.ASSIGN,
-            dto.vehicle_info ?? Vehicle.MOTORBIKE,
-            undefined,
-        );
+  // 🧩 2️⃣ Entity → Object để lưu DB
+  static toDeliveryPersistence(
+    delivery: DeliveryProfileEntity,
+    user: UserEntity
+  ): any {
+    const dbType = process.env.DB_TYPE || "mongo";
+
+    if (dbType === "mongo") {
+      return {
+        ID: delivery.ID,
+        user: user.get_Id(),
+        available: delivery.available ?? Available.ASSIGN,
+        vehicle_info: delivery.vehicle_info ?? Vehicle.MOTORBIKE,
+      };
     }
 
+    // MySQL
+    return {
+      id: delivery.ID,
+      userId: user.ID,
+      available: delivery.available ?? Available.ASSIGN,
+      vehicle_info: delivery.vehicle_info ?? Vehicle.MOTORBIKE,
+    };
+  }
+
+  // 🧩 3️⃣ DTO → Entity
+  static mapperDeliveryDtoToEntity(
+    dto: any,
+    user: UserEntity,
+    deliveryProfileID: string
+  ): DeliveryProfileEntity {
+    return new DeliveryProfileEntity(
+      deliveryProfileID,
+      user.ID as string,
+      dto.available ?? Available.ASSIGN,
+      dto.vehicle_info ?? Vehicle.MOTORBIKE,
+      undefined
+    );
+  }
 }

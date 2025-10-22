@@ -10,38 +10,71 @@ import { Vehicle } from "src/users/domain/enum/delivery-vehicle.enum";
 import { UpdateUserDto } from "src/users/application/dto/user/update-user.dto";
 
 export class UserMapper {
-  // Document -> Entity
-  static toEntity(userDoc: any): UserEntity {
-    const user = new UserEntity(
-      userDoc.ID,
-      userDoc.name,
-      userDoc.email,
-      userDoc.password,
-      userDoc.phone,
-      userDoc.address,
-      userDoc.avatar,
-      userDoc.userType,
-      userDoc.active,
-      userDoc._id,
 
+  // 🧩 1️⃣ Khai báo overload signatures (chỉ có khai báo, không có body)
+  static toEntity(userDoc: any): UserEntity;
+  static toEntity(row: any): UserEntity;
+
+  // 🧩 2️⃣ Thân hàm thực thi (chỉ một cái duy nhất)
+  static toEntity(input: any): UserEntity {
+    // Nếu là Mongo document (có _id)
+    if (input._id !== undefined) {
+      return new UserEntity(
+        input.ID,
+        input.name,
+        input.email,
+        input.password,
+        input.phone,
+        input.address,
+        input.avatar,
+        input.userType,
+        input.active,
+        input._id
+      );
+    }
+
+    // Nếu là SQL row (có id thay vì _id)
+    return new UserEntity(
+      input.id,
+      input.name,
+      input.email,
+      input.password,
+      input.phone,
+      input.address,
+      input.avatar,
+      input.userType,
+      input.active
     );
-    return user;
   }
 
   // Entity -> Schema object
-  static toUserPersistence(user: UserEntity): any {
-    return {
-      ID: user.ID,
-      name: user.name,
-      email: user.email,
-      password: user.password,
-      phone: user.phone,
-      address: user.address,
-      avatar: user.avatar,
-      userType: user.userType,
-      active: user.active,
-    };
-  }
+static toUserPersistence(user: UserEntity): any {
+  const db = process.env.DB_TYPE === 'mysql' ? 'sql' : 'mongo';
+
+  return db === 'sql'
+    ? {
+        id: user.ID,
+        name: user.name,
+        email: user.email,
+        password: user.password,
+        phone: user.phone,
+        address: user.address,
+        avatar: user.avatar,
+        userType: user.userType,
+        active: user.active,
+      }
+    : {
+        ID: user.ID,
+        name: user.name,
+        email: user.email,
+        password: user.password,
+        phone: user.phone,
+        address: user.address,
+        avatar: user.avatar,
+        userType: user.userType,
+        active: user.active,
+      };
+}
 
   // DTO -> Entity
   static mapperUserDtoToEntity(dto: CreateUserDto, userId: string): UserEntity {

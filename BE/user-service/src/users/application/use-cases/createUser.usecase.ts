@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import * as userRepository from "src/users/domain/respositories/user.repository";
 import { CreateUserDto } from "../dto/user/create-user.dto";
 import { UserEntity } from "src/users/domain/entities/user.entity";
@@ -22,66 +22,87 @@ export class CreateUserUseCase {
 
   async execute(dto: CreateUserDto): Promise<UserEntity> {
     this.validateInput(dto);
-
-    // Kiểm tra email trùng
+    Logger.debug(dto)
+    // ✅ Kiểm tra email trùng
     const existingUser = await this.userRepo.findByEmail(dto.email);
     if (existingUser) {
       throw new RpcException({
         statusCode: 409,
-        message: 'Email already in use',
+        message: "Email already in use",
       });
     }
 
-    // Sinh ID và entity user
+    // ✅ Sinh ID user tùy loại DB
+    const dbType = process.env.DB_TYPE || "mongo";
+    Logger.debug(`OL`);
     const userId = IdGeneratorService.generateId(dto.userType);
+    Logger.debug(`OK`);
+    // ✅ Mapping DTO → Entity
     const user = UserMapper.mapperUserDtoToEntity(dto, userId);
 
-    // Hash password
+    // ✅ Hash password
     user.password = await this.hashService.hashPassword(dto.password);
 
-    // Gán profile theo loại user
+    // ✅ Gán profile phù hợp với userType
     this.assignProfile(dto, user);
+    Logger.debug(this.assignProfile(dto, user))
+    Logger.debug(`🚀 Saving user = ${JSON.stringify(user)}`);
+    Logger.debug(`🚀 user.deliveryProfile = ${JSON.stringify(user.getDeliveryProfile())}`);
 
-    // Lưu user vào repository
-    return this.userRepo.save(user);
+
+    // ✅ Lưu vào repo (Mongo hoặc SQL đều được)
+    const savedUser = await this.userRepo.save(user);
+
+    return savedUser;
   }
 
   // ============================ PRIVATE HELPERS ============================
 
-  /** Validate DTO input logic */
   private validateInput(dto: CreateUserDto): void {
     if (!dto) {
-      throw new RpcException({ statusCode: 400, message: 'Invalid user data' });
+      throw new RpcException({ statusCode: 400, message: "Invalid user data" });
     }
 
     if (!dto.email?.trim()) {
-      throw new RpcException({ statusCode: 400, message: 'Email is required' });
+      throw new RpcException({ statusCode: 400, message: "Email is required" });
     }
 
     if (!dto.password?.trim()) {
-      throw new RpcException({ statusCode: 400, message: 'Password is required' });
+      throw new RpcException({ statusCode: 400, message: "Password is required" });
     }
 
     if (!dto.userType || !(Object.values(UserType) as string[]).includes(dto.userType)) {
-      throw new RpcException({ statusCode: 400, message: 'Invalid user type' });
+      throw new RpcException({ statusCode: 400, message: "Invalid user type" });
     }
   }
 
-  /** Assign the correct profile type based on userType */
+  /** Gán profile tương ứng theo loại user */
   private assignProfile(dto: CreateUserDto, user: UserEntity): void {
+    const dbType = process.env.DB_TYPE || "mongo";
+
     switch (user.userType) {
       case UserType.DELIVERY:
-        if (dto.deliveryProfile) {
-          const deliveryId = IdGeneratorService.generateDeliveryProfileId();
-          const delivery = DeliveryMapper.mapperDeliveryDtoToEntity(dto.deliveryProfile, user, deliveryId);
-          user.assignDeliveryProfile(delivery);
-        }
-        break;
+      if (dto.deliveryProfile) {
+        const deliveryId = IdGeneratorService.generateDeliveryProfileId();
+        const delivery = DeliveryMapper.mapperDeliveryDtoToEntity(dto.deliveryProfile, user, deliveryId);
+        user.assignDeliveryProfile(delivery);
+        Logger.debug(`✅ assignProfile: created deliveryProfile = ${JSON.stringify(delivery)}`);
+      } else {
+        Logger.warn("⚠️ dto.deliveryProfile is null or undefined");
+      }
+      break;
+
 
       case UserType.STAFF:
         if (dto.staffProfile) {
           const staffId = IdGeneratorService.generateStaffProfileId();
-          const staff = StaffMapper.mapperStaffDtoToEntity(dto.staffProfile, user, staffId);
+
+          const staff = StaffMapper.mapperStaffDtoToEntity(
+            dto.staffProfile,
+            user,
+            staffId,
+          );
+
           user.assignStaffProfile(staff);
         }
         break;
@@ -89,7 +110,13 @@ export class CreateUserUseCase {
       case UserType.CUSTOMER:
         if (dto.customerProfile) {
           const customerId = IdGeneratorService.generateCustomerProfileId();
-          const customer = CustomerMapper.mapperCustomerDtoToEntity(dto.customerProfile, user, customerId);
+
+          const customer = CustomerMapper.mapperCustomerDtoToEntity(
+            dto.customerProfile,
+            user,
+            customerId,
+          );
+
           user.assignCustomerProfile(customer);
         }
         break;

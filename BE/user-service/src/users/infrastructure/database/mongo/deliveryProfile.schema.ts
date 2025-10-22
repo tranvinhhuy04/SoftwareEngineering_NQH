@@ -1,8 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document} from 'mongoose';
 import { User } from './user.schema';
-import { Available } from '../../domain/enum/delivery-available.enum';
-import { Vehicle } from '../../domain/enum/delivery-vehicle.enum';
+import { Available } from '../../../domain/enum/delivery-available.enum';
+import { Vehicle } from '../../../domain/enum/delivery-vehicle.enum';
 
 export type DeliveryProfileDocument = DeliveryProfile & Document;
 
@@ -11,8 +11,8 @@ export class DeliveryProfile {
     @Prop({required: true, unique: true})
     ID: string;
 
-    @Prop({ type: Types.ObjectId, ref: User.name, required: true })
-    user: Types.ObjectId;
+    @Prop({ ref: User.name, required: true })
+    user: string;
 
     @Prop({ required: true, enum: Available, default: Available.ASSIGN })
     available: Available;
