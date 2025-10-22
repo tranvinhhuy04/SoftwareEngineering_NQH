@@ -25,10 +25,21 @@ export class UserController {
   ) {}
 
   @MessagePattern({ cmd: 'create_user' })
-  async createUser(@Payload() dto: CreateUserDto): Promise<UserEntity> {
+  async createUser(@Payload() dto: CreateUserDto): Promise<any> {
     console.log('📩 Received create_user message:', dto);
-    return this.createUserUseCase.execute(dto);
+
+    const createdUser = await this.createUserUseCase.execute(dto);
+
+    // ✅ Đảm bảo trả về _id Mongo thật
+    return {
+      _id: createdUser.get_Id(),   // Mongo ObjectId
+      ID: createdUser.ID,          // ID nghiệp vụ
+      email: createdUser.email,
+      userType: createdUser.userType,
+      name: createdUser.name,
+    };
   }
+
 
   @MessagePattern({ cmd: 'get_all_users' })
   async getAllUsers(): Promise<UserEntity[]> {

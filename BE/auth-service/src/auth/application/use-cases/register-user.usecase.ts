@@ -2,7 +2,8 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import * as passwordHashService from 'src/auth/domain/services/password-hash.service';
 import * as authRepository from 'src/auth/domain/responsitories/auth.respository';
-import { UserAuth } from 'src/auth/domain/entity/auth-user.entity';
+import { RegisterUserDto } from '../dto/register-user.dto';
+import { RegisterUserMapper } from '../mappers/register-user.mapper';
 import * as userServiceAdapter from 'src/auth/domain/adapter/user-service.adapter';
 
 @Injectable()
@@ -20,84 +21,44 @@ export class RegisterUserUseCase {
     private readonly userServiceAdapter: userServiceAdapter.IUserServiceAdapter,
   ) {}
 
-  async execute(dto: {
-      userId?: string;
-      name?: string;
-      email: string;
-      password: string;
-      role?: string;
-      userType?: string;
-      creatorRole?: string;
-      phone?: string;
-      address?: string;
-      active?: string;
-      avatar?: string;
-      staffProfile?: any;
-      deliveryProfile?: any;
-      customerProfile?: any;
-    }) {
-    {
+  async execute(dto: RegisterUserDto) {
     try {
       this.logger.debug(`📥 Incoming Register DTO:\n${JSON.stringify(dto, null, 2)}`);
 
-      // 1️⃣ Kiểm tra quyền
+      // 1️⃣ Kiểm tra quyền tạo tài khoản
       if (dto.creatorRole && dto.creatorRole !== 'admin' && dto.creatorRole !== 'system') {
         throw new RpcException('Permission denied');
       }
 
-      // 2️⃣ Kiểm tra email tồn tại
+      // 2️⃣ Kiểm tra email trùng trong Auth DB
       const existing = await this.repo.findByEmail(dto.email);
-      if (existing) {
-        throw new RpcException('Email already exists');
-      }
+      if (existing) throw new RpcException('Email already exists');
 
-      // 3️⃣ Sinh userId tự động nếu chưa có
-      const userId = dto.userId ?? `USR-${Date.now()}`;
-
-      // 4️⃣ Gán role nếu chưa có (map từ userType)
-      const role = dto.role ?? dto.userType ?? 'customer';
-
-      // 5️⃣ Hash mật khẩu
+      // 3️⃣ Hash mật khẩu
       const hash = await this.hashService.hash(dto.password);
 
-      // 6️⃣ Gọi adapter để tạo user trong user-service
-      await this.userServiceAdapter.createUser({
-        userId,
-        name: dto.name,
-        email: dto.email,
-        password: dto.password, // để user-service có thể lưu riêng
-        phone: dto.phone,
-        address: dto.address,
-        userType: dto.userType,
-        active: dto.active ?? 'active',
-        avatar: dto.avatar,
-        staffProfile: dto.staffProfile,
-        deliveryProfile: dto.deliveryProfile,
-        customerProfile: dto.customerProfile,
-      });
+      // 4️⃣ Chuẩn bị payload gửi sang UserService
+      const payload = RegisterUserMapper.toUserServicePayload(dto);
+      this.logger.debug(`📤 Sending create_user via RMQ:\n${JSON.stringify(payload, null, 2)}`);
 
-      this.logger.debug(`✅ Created user in user-service (${userId})`);
+      // 5️⃣ Gọi UserService để tạo user mới
+      const userResponse = await this.userServiceAdapter.createUser(payload);
+      const userId = userResponse?._id; // ✅ nhận _id Mongo thật
+      if (!userId) throw new RpcException('UserService did not return _id');
 
-      // 7️⃣ Lưu thông tin auth-user
-      const user = new UserAuth(
-        '',
-        userId,
-        dto.email,
-        hash,
-        true,
-        new Date(),
-        new Date(),
-      );
+      this.logger.debug(`✅ UserService returned _id: ${userId}`);
 
-      const saved = await this.repo.save(user);
+      // 6️⃣ Lưu thông tin vào Auth DB
+      const userEntity = RegisterUserMapper.toAuthEntity(dto, userId, hash);
+      const saved = await this.repo.save(userEntity);
       const mongoId = (saved as any)?._id ?? '(no id)';
-      this.logger.debug(`✅ Saved auth-user to MongoDB: ${mongoId}`);
 
-      return { message: 'Register success', userId, email: dto.email, role };
+      this.logger.debug(`✅ Saved AuthUser with _id=${mongoId}, userId=${userId}`);
+
+      return { message: 'Register success', userId, email: dto.email };
     } catch (error) {
       this.logger.error('❌ RegisterUserUseCase failed:', error);
       throw new RpcException(error.message || 'Registration failed');
     }
   }
-}
 }
