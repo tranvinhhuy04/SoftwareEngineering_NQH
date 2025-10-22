@@ -2,6 +2,9 @@ import { RegisterUserDto } from "../dto/register-user.dto";
 import { UserAuth } from "src/auth/domain/entity/auth-user.entity";
 
 export class RegisterUserMapper {
+  /**
+   * 🔄 Chuyển DTO từ AuthService sang payload để gửi tới UserService (qua RMQ)
+   */
   static toUserServicePayload(dto: RegisterUserDto) {
     return {
       name: dto.name,
@@ -9,7 +12,7 @@ export class RegisterUserMapper {
       password: dto.password,
       phone: dto.phone,
       address: dto.address,
-      userType: dto.userType,
+      userType: dto.userType ?? 'customer', // ✅ fallback an toàn
       active: dto.active ?? 'active',
       avatar: dto.avatar,
       staffProfile: dto.staffProfile,
@@ -18,15 +21,19 @@ export class RegisterUserMapper {
     };
   }
 
+  /**
+   * 🧱 Tạo entity UserAuth để lưu vào Auth DB (Mongo)
+   */
   static toAuthEntity(dto: RegisterUserDto, userId: string, hash: string): UserAuth {
     return new UserAuth(
-      '',                // id sẽ được Mongo tự sinh khi save
-      userId,            // _id từ UserService (Mongo)
+      '', // Mongo sẽ tự sinh _id
+      userId,
       dto.email,
-      hash,
-      true,
-      new Date(),
-      new Date(),
+      hash,                        // ✅ mật khẩu đã hash
+      true,                        // isActive mặc định
+      dto.userType?.trim() || 'customer', // ✅ nếu rỗng thì mặc định customer
+      new Date(),                  // createdAt
+      new Date(),                  // updatedAt
     );
   }
 }

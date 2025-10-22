@@ -1,5 +1,13 @@
 // src/auth/application/dto/register/register-user.dto.ts
-import { IsEmail, IsOptional, IsString, IsNotEmpty, ValidateNested } from 'class-validator';
+import { 
+  IsEmail, 
+  IsOptional, 
+  IsString, 
+  IsNotEmpty, 
+  ValidateNested, 
+  IsBoolean, 
+  IsNumber 
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class StaffProfileDto {
@@ -8,9 +16,11 @@ class StaffProfileDto {
   shift?: string;
 
   @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 
   @IsOptional()
+  @IsNumber()
   handledOrders?: number;
 }
 
@@ -20,6 +30,7 @@ class DeliveryProfileDto {
   vehicleType?: string;
 
   @IsOptional()
+  @IsBoolean()
   isAvailable?: boolean;
 }
 
@@ -29,6 +40,7 @@ class CustomerProfileDto {
   loyaltyLevel?: string;
 
   @IsOptional()
+  @IsNumber()
   totalOrders?: number;
 }
 
@@ -48,14 +60,12 @@ export class RegisterUserDto {
   @IsString()
   password: string;
 
+  /** 🔑 Quy định vai trò người dùng (ví dụ: "admin", "restaurant-staff", "customer") */
   @IsOptional()
   @IsString()
-  role?: string;
+  userType?: string; // ✅ Chỉ dùng userType làm role (để đồng bộ với UserService)
 
-  @IsOptional()
-  @IsString()
-  userType?: string;
-
+  /** 🔒 Dành cho hệ thống hoặc admin khi tạo người dùng mới */
   @IsOptional()
   @IsString()
   creatorRole?: string;
@@ -76,16 +86,19 @@ export class RegisterUserDto {
   @IsString()
   avatar?: string;
 
+  /** 👨‍🍳 Hồ sơ nhân viên */
   @IsOptional()
   @ValidateNested()
   @Type(() => StaffProfileDto)
   staffProfile?: StaffProfileDto;
 
+  /** 🛵 Hồ sơ giao hàng */
   @IsOptional()
   @ValidateNested()
   @Type(() => DeliveryProfileDto)
   deliveryProfile?: DeliveryProfileDto;
 
+  /** 👤 Hồ sơ khách hàng */
   @IsOptional()
   @ValidateNested()
   @Type(() => CustomerProfileDto)

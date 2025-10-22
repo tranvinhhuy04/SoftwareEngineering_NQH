@@ -11,7 +11,7 @@ import { BcryptPasswordService } from './infrastructure/services/bcrypt-password
 // 🧩 Constants
 import { USER_SERVICE } from './contact/services/services';
 import { AuthController } from './presentation/auth.controller';
-import { AuthUserSchema, AuthUserSchemaFactory } from './infrastructure/database/authUser.schema';
+import { AuthUserSchema,AuthUserSchemaDef } from './infrastructure/database/authUser.schema';
 import { UserAuthMongoRepository } from './infrastructure/repositories/auth.respository.imp';
 import { LoginUseCase } from './application/use-cases/login.usecase';
 import { JwtTokenService } from './infrastructure/services/jwt-token.service';
@@ -22,7 +22,7 @@ import { JwtTokenService } from './infrastructure/services/jwt-token.service';
 
     // 🧱 Kết nối MongoDB (AuthService database)
     MongooseModule.forFeature([
-      { name: AuthUserSchema.name, schema: AuthUserSchemaFactory },
+      { name: AuthUserSchema.name, schema: AuthUserSchemaDef },
     ]),
 
     // 🧩 Kết nối tới UserService qua RabbitMQ

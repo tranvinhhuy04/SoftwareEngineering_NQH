@@ -45,4 +45,12 @@ export class UserServiceRmqAdapter {
       });
     }
   }
+  async getUserById(userId: string): Promise<any> {
+    try {
+      return await lastValueFrom(this.userClient.send({ cmd: 'get_user_by_id' }, userId));
+    } catch (err) {
+      this.logger.error(`❌ Failed to fetch user ${userId}: ${err.message}`);
+      return null;
+    }
+  }
 }

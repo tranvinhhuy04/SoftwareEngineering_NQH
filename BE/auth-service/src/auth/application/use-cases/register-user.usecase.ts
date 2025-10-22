@@ -25,7 +25,7 @@ export class RegisterUserUseCase {
     try {
       this.logger.debug(`📥 Incoming Register DTO:\n${JSON.stringify(dto, null, 2)}`);
 
-      // 1️⃣ Kiểm tra quyền tạo tài khoản
+      // 1️⃣ Kiểm tra quyền người tạo (nếu có)
       if (dto.creatorRole && dto.creatorRole !== 'admin' && dto.creatorRole !== 'system') {
         throw new RpcException('Permission denied');
       }
@@ -41,23 +41,40 @@ export class RegisterUserUseCase {
       const payload = RegisterUserMapper.toUserServicePayload(dto);
       this.logger.debug(`📤 Sending create_user via RMQ:\n${JSON.stringify(payload, null, 2)}`);
 
-      // 5️⃣ Gọi UserService để tạo user mới
+      // 5️⃣ Gọi UserService để tạo user trong Mongo
       const userResponse = await this.userServiceAdapter.createUser(payload);
-      const userId = userResponse?._id; // ✅ nhận _id Mongo thật
+      const userId = userResponse?._id;
+      const userType = userResponse?.userType || dto.userType || 'customer';
+
       if (!userId) throw new RpcException('UserService did not return _id');
 
-      this.logger.debug(`✅ UserService returned _id: ${userId}`);
+      this.logger.debug(`✅ UserService returned _id: ${userId}, userType: ${userType}`);
 
-      // 6️⃣ Lưu thông tin vào Auth DB
+      // 6️⃣ Chuẩn bị entity để lưu vào Auth DB
       const userEntity = RegisterUserMapper.toAuthEntity(dto, userId, hash);
+
+      // ⚙️ Ghi đè role bằng userType từ UserService để đảm bảo đồng bộ
+      (userEntity as any).role = userType;
+
+      this.logger.debug(`🧩 Final role to save in Auth DB: ${userEntity.role}`);
+
+      // 7️⃣ Lưu vào MongoDB Auth
       const saved = await this.repo.save(userEntity);
       const mongoId = (saved as any)?._id ?? '(no id)';
 
-      this.logger.debug(`✅ Saved AuthUser with _id=${mongoId}, userId=${userId}`);
+      this.logger.debug(`✅ Saved AuthUser with _id=${mongoId}, userId=${userId}, role=${userEntity.role}`);
 
-      return { message: 'Register success', userId, email: dto.email };
+      // 8️⃣ Trả kết quả
+      return {
+        status: 'success',
+        message: 'Register success',
+        userId,
+        email: dto.email,
+        role: userEntity.role,
+      };
+
     } catch (error) {
-      this.logger.error('❌ RegisterUserUseCase failed:', error);
+      this.logger.error(`❌ RegisterUserUseCase failed: ${error.message}`);
       throw new RpcException(error.message || 'Registration failed');
     }
   }
