@@ -1,29 +1,17 @@
 import { Module } from '@nestjs/common';
-import { ClientsModule, Transport } from '@nestjs/microservices';
+import { MongooseModule } from '@nestjs/mongoose';
+import { Product, ProductSchema } from './product.entity';
+import { ProductService } from './app.service';
 import { ProductController } from './app.controller';
-import { ProductService } from './app.service'; // ✅ thêm dòng này
 
 @Module({
   imports: [
-    ClientsModule.register([
-      {
-        name: 'USER_SERVICE',
-        transport: Transport.TCP,
-        options: { host: 'localhost', port: 4001 },
-      },
-      {
-        name: 'PAYMENT_SERVICE',
-        transport: Transport.TCP,
-        options: { host: 'localhost', port: 4002 },
-      },
-      {
-        name: 'PRODUCT_SERVICE',
-        transport: Transport.TCP,
-        options: { host: 'localhost', port: 4003 },
-      },
-    ]),
+    MongooseModule.forRoot(process.env.MONGO_URI as string, {
+      dbName: process.env.DB_NAME,
+    }),
+    MongooseModule.forFeature([{ name: Product.name, schema: ProductSchema }]),
   ],
   controllers: [ProductController],
-  providers: [ProductService], // ✅ thêm dòng này để Nest inject được
+  providers: [ProductService],
 })
 export class AppModule {}
