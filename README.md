@@ -28,5 +28,4 @@ _Trường Đại học Sài Gòn_
 
 ## 📝 Sản phẩm
 - Report: https://docs.google.com/document/d/1zPx6X-3frHWjnj4Luw2A6X1V8MSxzXzFsnEXEflehkU/edit?usp=drive_link
-- Sprint Planning: https://docs.google.com/spreadsheets/d/1BXtk84Bbk2s8vncdhc1oUfUTt1Y5aGD8Yo8jC-Lj6Ck/edit?usp=sharing
 - Mã nguồn và demo lưu trữ tại repo: https://github.com/tranvinhhuy04/SoftwareEngineering_NQH
