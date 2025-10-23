@@ -53,4 +53,13 @@ export class UserServiceRmqAdapter {
       return null;
     }
   }
+
+  async getUserByEmail(email:string): Promise<any>{
+    try {
+      return await lastValueFrom(this.userClient.send({ cmd: 'get_user_by_email' }, email));
+    } catch (err) {
+      this.logger.error(`❌ Failed to fetch user ${email}: ${err.message}`);
+      return null;
+    }
+  }
 }

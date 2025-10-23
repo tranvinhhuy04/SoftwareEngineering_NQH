@@ -3,6 +3,7 @@ import { RpcException } from '@nestjs/microservices';
 import * as authRepository from 'src/auth/domain/responsitories/auth.respository';
 import * as passwordHashService from 'src/auth/domain/services/password-hash.service';
 import * as tokenService from 'src/auth/domain/services/token.service';
+import * as userServiceAdapter from 'src/auth/domain/adapter/user-service.adapter';
 
 @Injectable()
 export class LoginUseCase {
@@ -17,6 +18,9 @@ export class LoginUseCase {
 
     @Inject('ITokenService')
     private readonly tokenService: tokenService.ITokenService,
+
+    @Inject('IUserServiceAdapter')
+    private readonly userServiceAdapter: userServiceAdapter.IUserServiceAdapter,
   ) {}
 
   async execute(dto: { email: string; password: string }) {
@@ -24,15 +28,15 @@ export class LoginUseCase {
       this.logger.debug(`📥 Login attempt: ${dto.email}`);
 
       // 1️⃣ Tìm user trong Auth DB
-      const userAuth = await this.repo.findByEmail(dto.email);
-      if (!userAuth) throw new RpcException('Invalid email or password');
+      const userAuth = await this.userServiceAdapter.getUserByEmail(dto.email);
+      if (!userAuth) throw new RpcException('Invalid email');
 
       // 2️⃣ Kiểm tra mật khẩu
-      const valid = await this.hashService.compare(dto.password, userAuth.passwordHash);
-      if (!valid) throw new RpcException('Invalid email or password');
+      const valid = await this.hashService.compare(dto.password, userAuth.password);
+      if (!valid) throw new RpcException('Invalid password');
 
       // 3️⃣ Lấy role từ Auth DB (không gọi sang UserService)
-      const role = userAuth.role || 'customer';
+      const role = userAuth.userType || 'customer';
       const permissions = this.mapRoleToPermissions(role);
 
       // 4️⃣ Sinh token JWT
@@ -48,10 +52,11 @@ export class LoginUseCase {
         accessToken,
         refreshToken,
       };
-    } catch (err) {
-      this.logger.error(`❌ Login failed: ${err.message}`);
-      throw new RpcException('Internal server error');
+    }  catch (err) {
+      Logger.error(`❌ Login failed: ${err.message}`);
+      throw new RpcException(err.message); // tạm thời không che bằng "Internal server error"
     }
+
   }
 
   private mapRoleToPermissions(role: string): string[] {
