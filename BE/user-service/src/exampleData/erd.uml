@@ -1,0 +1,90 @@
+@startuml
+title User Aggregate - FastBite (Single Store)
+caption Các thuộc tính được thiết kế dựa trên yêu cầu người dùng trong phần User Story & MoSCoW
+
+' ==========================
+' ENUMS
+' ==========================
+enum UserType {
+  customer
+  restaurant_admin
+  restaurant_staff
+  delivery-person
+}
+
+enum Available {
+  assign,
+  unassign
+}
+
+enum Vehicle {
+  car,
+  motorbike,
+  bike,
+}
+
+enum UserActive {
+  active
+  inactive
+}
+
+enum StaffShift {
+  morning
+  afternoon
+  night
+}
+
+' ==========================
+' USER ENTITY (AGGREGATE ROOT)
+' ==========================
+class UserEntity {
+  - _id: ObjectId
+  + ID: string
+  + name: string
+  + email: string
+  + password: string
+  + phone: string
+  + address: string
+  + userType: UserType
+  + active: UserActive
+  --
+  - customerProfile: CustomerProfileEntity
+  - staffProfile: StaffProfileEntity
+  - deliveryDetail: DeliveryDetailEntity
+  --
+  + assignCustomerProfile(profile: CustomerProfileEntity)
+  + assignStaffProfile(profile: StaffProfileEntity)
+  + assignDeliveryDetail(detail: DeliveryDetailEntity)
+  + getCustomerProfile(): CustomerProfileEntity
+  + getStaffProfile(): StaffProfileEntity
+  + getDeliveryDetail(): DeliveryDetailEntity
+}
+
+' ==========================
+' SUB-ENTITIES
+' ==========================
+class CustomerProfileEntity {
+  + defaultAddress: string
+  + preferredPaymentMethod: string
+  + savedPaymentMethods: string[]
+  + favoriteItems: string[]
+}
+
+class StaffProfileEntity {
+  + shift: string
+  + isActive: boolean
+  + handledOrders: number
+}
+
+class DeliveryDetailEntity {
+  + available: boolean
+  + vehicle_info: string
+}
+' ==========================
+' RELATIONSHIPS
+' ==========================
+UserEntity "1" *-- "0..1" CustomerProfileEntity : owns >
+UserEntity "1" *-- "0..1" StaffProfileEntity : owns >
+UserEntity "1" *-- "0..1" DeliveryDetailEntity : owns >
+
+@enduml

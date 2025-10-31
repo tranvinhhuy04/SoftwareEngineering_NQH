@@ -33,7 +33,7 @@ services:
 
   api-gateway:
     build: ./api-gateway
-    container_name: api-gateway
+    container_name: Api-gateway
     ports:
       - "4000:4000"
     depends_on:
@@ -49,14 +49,14 @@ services:
 
   user-service:
     build: ./user-service
-    container_name: user-service
+    container_name: User-service
     depends_on:
       mongodb:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
     environment:
-      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/purely_auth_service?retryWrites=true&w=majority&appName=tyty
+      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/user_service?retryWrites=true&w=majority&appName=tyty
       - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
     restart: always
 
@@ -69,7 +69,20 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
-      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/purely_cart_service?retryWrites=true&w=majority&appName=tyty
+      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/payment_service?retryWrites=true&w=majority&appName=tyty
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+    restart: always
+  
+  auth_service: 
+    build: ./auth-service
+    container_name: Auth_service
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/auth_service?retryWrites=true&w=majority&appName=tyty
       - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
     restart: always
 
