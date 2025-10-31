@@ -16,6 +16,15 @@ import { AppService } from './app.service';
         },
       },
       {
+        name: 'AUTH_SERVICE',
+        transport: Transport.RMQ,
+        options: {
+          urls: [process.env.RABBITMQ_URI || 'amqp://localhost:5672'],
+          queue: 'auth_queue',
+          queueOptions: { durable: false },
+        },
+      },
+      {
         name: 'PAYMENT_SERVICE',
         transport: Transport.RMQ,
         options: {
@@ -25,11 +34,11 @@ import { AppService } from './app.service';
         },
       },
       {
-        name: 'AUTH_SERVICE',
+        name: 'PRODUCT_SERVICE', // ✅ thêm client này để Gateway gửi đến ProductService
         transport: Transport.RMQ,
         options: {
           urls: [process.env.RABBITMQ_URI || 'amqp://localhost:5672'],
-          queue: 'auth_queue',
+          queue: 'products_queue',
           queueOptions: { durable: false },
         },
       },
