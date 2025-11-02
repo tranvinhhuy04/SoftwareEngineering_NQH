@@ -1,4 +1,4 @@
-import { Controller } from "@nestjs/common";
+import { Controller, Logger } from "@nestjs/common";
 import { CreateUserUseCase } from "../application/use-cases/createUser.usecase";
 import { MessagePattern, Payload } from "@nestjs/microservices";
 import { CreateUserDto } from "../application/dto/user/create-user.dto";
@@ -30,7 +30,7 @@ export class UserController {
 
     const createdUser = await this.createUserUseCase.execute(dto);
 
-    // ✅ Đảm bảo trả về _id Mongo thật
+    // Đảm bảo trả về _id Mongo thật
     return {
       _id: createdUser.get_Id(),   // Mongo ObjectId
       ID: createdUser.ID,          // ID nghiệp vụ
@@ -63,6 +63,7 @@ export class UserController {
 
   @MessagePattern({ cmd: 'deleted_user' })
   async getDeletedUsers(@Payload() userId: string): Promise<any> {
+    Logger.debug(`📤 Sending deleted_user -> USERS_SERVICE with id ${userId}`);
     return this.getDeletedUsersUseCase.execute(userId);
   }
   

@@ -20,6 +20,7 @@ export class DeletedUsersUseCase {
           message: 'No users found',
         });
       }
+      await this.userRepo.remove(ID);
       return {
         message: `Get deleted users id ${ID} successfully`,
       }
