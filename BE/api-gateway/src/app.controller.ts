@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Inject, Param, Delete, Query, Put, Logger } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
+import { HttpService } from '@nestjs/axios';
 
 @Controller()
 export class AppController {
@@ -8,7 +9,7 @@ export class AppController {
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
     @Inject('AUTH_SERVICE') private readonly authClient: ClientProxy,
     @Inject('PAYMENT_SERVICE') private readonly paymentClient: ClientProxy,
-    @Inject('PRODUCT_SERVICE') private readonly productClient: ClientProxy,
+    private readonly http: HttpService
   ) {}
 
   // API cho user-service
@@ -73,7 +74,7 @@ export class AppController {
       throw new RpcException(err.message || 'Login failed');
     }
   }
-
+// thieu refresh token
   @Post('auth/refresh')
   async refreshToken(@Body() body: { refreshToken: string }) {
     Logger.debug(`📤 Sending refresh_token -> AUTH_SERVICE`);
@@ -91,31 +92,5 @@ export class AppController {
   @Get('payments')
   getPayments() {
     return this.paymentClient.send({ cmd: 'get_payments' }, {});
-  }
-
-  // ===== PRODUCT SERVICE =====
-  @Post('products')
-  createProduct(@Body() data: any) {
-    return this.productClient.send({ cmd: 'create_product' }, data);
-  }
-
-  @Get('products')
-  getProducts() {
-    return this.productClient.send({ cmd: 'get_products' }, {});
-  }
-
-  @Get('products/:id')
-  getProduct(@Param('id') id: number) {
-    return this.productClient.send({ cmd: 'get_product' }, { id });
-  }
-
-  @Put('products/:id')
-  updateProduct(@Param('id') id: number, @Body() data: any) {
-    return this.productClient.send({ cmd: 'update_product' }, { id, ...data });
-  }
-
-  @Delete('products/:id')
-  deleteProduct(@Param('id') id: number) {
-    return this.productClient.send({ cmd: 'delete_product' }, { id });
   }
 }
