@@ -18,8 +18,8 @@ async function bootstrap() {
 
   // ✅ Khởi động cả HTTP + Microservice
   await app.startAllMicroservices();
-  await app.listen(process.env.PORT || 4008);
+  await app.listen(4008);
 
-  console.log(`🚀 Payment service is running on http://localhost:${process.env.PORT || 4008}`);
+  console.log(`🚀 Payment service is running on http://localhost:4008`);
 }
 bootstrap();

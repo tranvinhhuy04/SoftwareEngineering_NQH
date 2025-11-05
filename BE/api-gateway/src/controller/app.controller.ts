@@ -8,7 +8,6 @@ export class AppController {
   constructor(
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
     @Inject('AUTH_SERVICE') private readonly authClient: ClientProxy,
-    @Inject('PAYMENT_SERVICE') private readonly paymentClient: ClientProxy,
     private readonly http: HttpService
   ) {}
 
@@ -81,16 +80,5 @@ export class AppController {
     return firstValueFrom(
       this.authClient.send({ cmd: 'refresh_token' }, body).pipe(timeout(10000)),
     );
-  }
-  
-  // ===== PAYMENT SERVICE =====
-  @Post('payments')
-  createPayment(@Body() paymentData: any) {
-    return this.paymentClient.send({ cmd: 'create_payment' }, paymentData);
-  }
-
-  @Get('payments')
-  getPayments() {
-    return this.paymentClient.send({ cmd: 'get_payments' }, {});
   }
 }

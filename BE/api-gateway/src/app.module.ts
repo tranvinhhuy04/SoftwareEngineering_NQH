@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { HttpModule } from '@nestjs/axios';
-import { AppController } from './app.controller';
+import { AppController } from './controller/app.controller';
 import { AppService } from './app.service';
-import { ProductGatewayController } from './product-gateway.controller';
+import { ProductGatewayController } from './controller/product-gateway.controller';
+import { OrderGatewayController } from './controller/order-gateway.controller';
+import { PaymentGatewayController } from './controller/payment_gateway.controller';
 
 @Module({
   imports: [
@@ -27,19 +29,10 @@ import { ProductGatewayController } from './product-gateway.controller';
           queue: 'auth_queue',
           queueOptions: { durable: false },
         },
-      },
-      {
-        name: 'PAYMENT_SERVICE',
-        transport: Transport.RMQ,
-        options: {
-          urls: [process.env.RABBITMQ_URI || 'amqp://localhost:5672'],
-          queue: 'payments_queue',
-          queueOptions: { durable: false },
-        },
-      },
+      }
     ]),
   ],
-  controllers: [AppController, ProductGatewayController],
+  controllers: [AppController, ProductGatewayController, OrderGatewayController, PaymentGatewayController],
   providers: [AppService],
 })
 export class AppModule {}
