@@ -4,6 +4,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { Order } from './order.entity';
+import { HttpModule } from '@nestjs/axios';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
@@ -20,7 +21,7 @@ dotenv.config();
       synchronize: true, // chỉ bật khi dev
     }),
     TypeOrmModule.forFeature([Order]),
-
+    HttpModule,
     // Kết nối đến Product-service qua RabbitMQ
     ClientsModule.register([
       {

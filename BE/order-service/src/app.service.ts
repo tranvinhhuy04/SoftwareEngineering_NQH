@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import { ClientProxy } from '@nestjs/microservices';
 import { Order } from './order.entity';
 
@@ -9,14 +11,15 @@ export class AppService {
   constructor(
     @InjectRepository(Order)
     private readonly orderRepo: Repository<Order>,
-    @Inject('PRODUCT_SERVICE') private readonly productClient: ClientProxy,
+    // @Inject('PRODUCT_SERVICE') private readonly productClient: ClientProxy,
+    private readonly http: HttpService, 
   ) {}
 
   async createOrder(data: { productId: string; quantity: number; userId: number }) {
-    // Lấy giá từ product-service qua RabbitMQ
-    const product = await this.productClient
-      .send({ cmd: 'get_product' }, { id: data.productId })
-      .toPromise();
+    // ✅ Gọi product-service qua HTTP REST
+    const productApiUrl = `http://localhost:4003/products/${data.productId}`; 
+    const response = await firstValueFrom(this.http.get(productApiUrl));
+    const product = response.data;
 
     const price = product?.price || 0;
 
