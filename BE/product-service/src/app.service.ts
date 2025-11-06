@@ -27,6 +27,20 @@ export class ProductService {
       if (!validCategory) {
         throw new Error('Invalid category');
       }
+      
+      const price = data.price;
+      if (price !== undefined && price < 0) {
+        throw new Error('Price must be a non-negative number');
+      }
+
+      const name = data.name;
+      if (!name || name.trim() === '') {
+        throw new Error('Name is required');
+      }
+      if (typeof name !== 'string') {
+        throw new Error('Name must be a string');
+      }
+
       const newProduct = new this.productModel(data);
       return newProduct.save();
       } catch (error) {

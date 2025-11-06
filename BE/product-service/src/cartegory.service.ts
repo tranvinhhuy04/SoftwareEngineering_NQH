@@ -15,7 +15,18 @@ export class CategoryService {
     return this.categoryModel.findById(id).exec();
   }
 
-  create(data: Partial<Category>) {
+  async create(data: Partial<Category>) {
+    if (!data.name || data.name.trim() === '') {
+      throw new Error('Name is required');
+    }
+    const name = data.name;
+    if (typeof name !== 'string') {
+      throw new Error('Name must be a string');
+    }
+    if (await this.categoryModel.findOne({ name: name }).exec()) {
+      throw new Error('Category already exists');
+    }
+    
     const newCategory = new this.categoryModel(data);
     return newCategory.save();
   }
