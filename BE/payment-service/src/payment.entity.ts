@@ -8,8 +8,8 @@ export class Payment extends Document {
   @Prop({ required: true, enum: ['MOMO', 'COD', 'ZALO_PAY'] }) payment_gateway: string;
   @Prop({ required: true, enum: ['COMPLETED', 'PENDING', 'FAILED'] }) payment_status: string;
   @Prop({ required: true }) transaction_id: string;
-  @Prop({ required: true }) order_id: number;
-  @Prop({ required: true }) user_id: number;
+  @Prop({ required: true }) order_id: string;
+  @Prop({ required: true }) user_id: string;
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);

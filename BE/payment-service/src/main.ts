@@ -14,6 +14,7 @@ async function bootstrap() {
       queue: 'payments_queue',
       queueOptions: { durable: false },
     },
+    
   });
 
   // ✅ Khởi động cả HTTP + Microservice
