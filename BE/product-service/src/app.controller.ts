@@ -1,10 +1,15 @@
 import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
 import { ProductService } from './app.service';
 import { Product } from './product.entity';
+import { Category } from './category.entity';
+import { CategoryService } from './cartegory.service';
 
 @Controller('products')
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
+  constructor(
+    private readonly productService: ProductService,
+    private readonly categoryService: CategoryService
+  ) {}
 
   @Get()
   getAll() {
@@ -17,8 +22,13 @@ export class ProductController {
   }
 
   @Post()
-  create(@Body() data: Product) {
+  createProduct(@Body() data: Product) {
     return this.productService.create(data);
+  }
+
+  @Post('categories')
+  createCategory(@Body() data: Category) {
+    return this.categoryService.create(data);
   }
 
   @Put(':id')

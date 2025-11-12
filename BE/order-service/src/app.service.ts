@@ -39,4 +39,8 @@ export class AppService {
   getAllOrders() {
     return this.orderRepo.find();
   }
+
+  getOrderById(id: string) {
+    return this.orderRepo.findOneBy({ order_id: parseInt(id) });
+  }
 }
