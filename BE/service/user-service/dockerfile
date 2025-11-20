@@ -1,0 +1,18 @@
+FROM node:20
+
+WORKDIR /app
+
+# Copy file package và lock
+COPY package*.json ./
+
+# Cài dependencies (có bcryptjs)
+RUN npm install && npm install -g @nestjs/cli
+
+# Copy source code
+COPY . .
+
+# Build
+RUN npm run build
+
+# Start app
+CMD ["node", "dist/service/auth-service/main.js"]

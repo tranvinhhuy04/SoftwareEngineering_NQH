@@ -13,7 +13,6 @@ Project được thực hiện bởi nhóm sinh viên Trường Đại học Sà
 
 Dự án được thực hiện dưới sự hướng dẫn của:
 
-- **TS. Nguyễn Quốc Huy**
 
 _Trường Đại học Sài Gòn_
 
