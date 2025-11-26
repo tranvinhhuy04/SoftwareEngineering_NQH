@@ -1,0 +1,141 @@
+version: "3.9"
+
+services:
+  # 🧠 Authentication Service
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "5010:5001"
+    environment:
+      - PORT=5001
+      - MONGO_URI=mongodb+srv://vietnx2707_db_user:123@cluster0.1ijcrzp.mongodb.net/authdb?retryWrites=true&w=majority&appName=Cluster0
+      - JWT_SECRET=supersecret123
+    depends_on:
+      - mongo
+    networks:
+      - app-net # ✅ thêm dòng này
+    restart: always
+
+  # 🍽️ Restaurant Service
+  restaurant-service:
+    build: ./restaurant-service
+    container_name: restaurant-service
+    ports:
+      - "5020:5002"
+    environment:
+      - PORT=5002
+      - MONGO_URI=mongodb+srv://vietnx2707_db_user:123@cluster0.1ijcrzp.mongodb.net/restaurantdb?retryWrites=true&w=majority&appName=Cluster0
+      - JWT_SECRET=supersecret123
+      - CLOUDINARY_CLOUD_NAME=dhkwjpxos
+      - CLOUDINARY_API_KEY=462713631227229
+      - CLOUDINARY_API_SECRET=iCrDe5L2tClDf_6l1gwRmib6rEo
+    depends_on:
+      - mongo
+    networks:
+      - app-net # ✅ thêm dòng này
+    restart: always
+
+  # 🧾 Order Service
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "5030:5003"
+    environment:
+      - PORT=5003
+      - MONGO_URI=mongodb+srv://vietnx2707_db_user:123@cluster0.1ijcrzp.mongodb.net/orderdb?retryWrites=true&w=majority&appName=Cluster0
+      - JWT_SECRET=supersecret123
+      - AUTH_SERVICE_URL=http://auth-service:5001
+      - RESTAURANT_SERVICE_URL=http://restaurant-service:5002
+      - PAYMENT_SERVICE_URL=http://payment-service:5008
+    depends_on:
+      - mongo
+      - auth-service
+      - restaurant-service
+      - rabbitmq
+    networks:
+      - app-net # ✅ thêm dòng này
+    restart: always
+
+  # 💸 Payment Service
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    ports:
+      - "5080:5008"
+    environment:
+      - PORT=5008
+      - MONGO_URI=mongodb+srv://vietnx2707_db_user:123@cluster0.1ijcrzp.mongodb.net/paymentdb?retryWrites=true&w=majority&appName=Cluster0
+      - STRIPE_SECRET_KEY=sk_test_51S8Mu3L5S2BtEXK0Mtpi70zJFcLhIJXl7LwZe52ibq4J9K5U4mM1vaBz9M8T0dk2oPp3pyuBHrNpdlWmEP66abSc00aNmopKTv
+      - JWT_SECRET=supersecret123
+    depends_on:
+      - mongo
+      - rabbitmq
+    networks:
+      - app-net # ✅ thêm dòng này
+    restart: always
+
+  # 🚚 Delivery Service
+  delivery-service:
+    build: ./delivery-service
+    container_name: delivery-service
+    ports:
+      - "5040:5004"
+    environment:
+      - PORT=5004
+      - ORDER_SERVICE_URL=http://order-service:5003
+      - JWT_SECRET=supersecret123
+    depends_on:
+      - order-service
+      - rabbitmq
+    networks:
+      - app-net # ✅ thêm dòng này
+    restart: always
+
+  # 🧩 API Gateway
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8000:8000"
+    env_file: ./api-gateway/.env
+    depends_on:
+      - auth-service
+      - restaurant-service
+      - order-service
+      - delivery-service
+      - payment-service
+    networks:
+      - app-net
+    restart: always
+
+  # 🐇 RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672" # http://localhost:15672 (guest/guest)
+    networks:
+      - app-net
+    restart: always
+
+  # 🗄️ MongoDB
+  mongo:
+    image: mongo
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-net
+    restart: always
+
+volumes:
+  mongo-data:
+
+networks:
+  app-net:
+    driver: bridge
