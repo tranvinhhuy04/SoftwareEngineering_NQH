@@ -9,7 +9,7 @@ services:
       - "5010:5001"
     environment:
       - PORT=5001
-      - MONGO_URI=mongodb+srv://vietnx2707_db_user:123@cluster0.1ijcrzp.mongodb.net/authdb?retryWrites=true&w=majority&appName=Cluster0
+      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/auth-service?retryWrites=true&w=majority&appName=tyty
       - JWT_SECRET=supersecret123
     depends_on:
       - mongo
@@ -25,7 +25,7 @@ services:
       - "5020:5002"
     environment:
       - PORT=5002
-      - MONGO_URI=mongodb+srv://vietnx2707_db_user:123@cluster0.1ijcrzp.mongodb.net/restaurantdb?retryWrites=true&w=majority&appName=Cluster0
+      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/restaurant-service?retryWrites=true&w=majority&appName=tyty
       - JWT_SECRET=supersecret123
       - CLOUDINARY_CLOUD_NAME=dhkwjpxos
       - CLOUDINARY_API_KEY=462713631227229
@@ -44,7 +44,7 @@ services:
       - "5030:5003"
     environment:
       - PORT=5003
-      - MONGO_URI=mongodb+srv://vietnx2707_db_user:123@cluster0.1ijcrzp.mongodb.net/orderdb?retryWrites=true&w=majority&appName=Cluster0
+      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/order-service?retryWrites=true&w=majority&appName=tyty
       - JWT_SECRET=supersecret123
       - AUTH_SERVICE_URL=http://auth-service:5001
       - RESTAURANT_SERVICE_URL=http://restaurant-service:5002
@@ -66,7 +66,7 @@ services:
       - "5080:5008"
     environment:
       - PORT=5008
-      - MONGO_URI=mongodb+srv://vietnx2707_db_user:123@cluster0.1ijcrzp.mongodb.net/paymentdb?retryWrites=true&w=majority&appName=Cluster0
+      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/payment-service?retryWrites=true&w=majority&appName=tyty
       - STRIPE_SECRET_KEY=sk_test_51S8Mu3L5S2BtEXK0Mtpi70zJFcLhIJXl7LwZe52ibq4J9K5U4mM1vaBz9M8T0dk2oPp3pyuBHrNpdlWmEP66abSc00aNmopKTv
       - JWT_SECRET=supersecret123
     depends_on:
@@ -113,7 +113,7 @@ services:
   # 🐇 RabbitMQ
   rabbitmq:
     image: rabbitmq:3.13-management
-    container_name: rabbitmq
+    container_name: rabbitMQ
     ports:
       - "5672:5672"
       - "15672:15672" # http://localhost:15672 (guest/guest)
@@ -124,7 +124,7 @@ services:
   # 🗄️ MongoDB
   mongo:
     image: mongo
-    container_name: mongo
+    container_name: mongodb
     ports:
       - "27017:27017"
     volumes:
