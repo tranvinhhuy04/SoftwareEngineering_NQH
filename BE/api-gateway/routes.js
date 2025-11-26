@@ -52,7 +52,7 @@ function mountRoutes(app) {
     createProxyMiddleware({
       target: "http://restaurant-service:5002",
       changeOrigin: true,
-      pathRewrite: { "^/restaurant": "" }, // hoặc '' nếu service không có tiền tố /restaurant
+      // pathRewrite: { "^/restaurant": "" }
       logLevel: "debug",
     })
   );

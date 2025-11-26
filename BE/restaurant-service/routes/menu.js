@@ -1,0 +1,113 @@
+const express = require("express");
+const router = express.Router();
+
+const MenuItem = require("../models/MenuItem");
+const Restaurant = require("../models/Restaurant");
+const Category = require("../models/Category");
+const { verifyToken, allowRoles } = require("../utils/authMiddleware");
+const { v2: cloudinary } = require("cloudinary");
+
+/* ============================================================
+ * CREATE MENU ITEM
+ * ============================================================ */
+router.post(
+  "/menu",
+  verifyToken,
+  allowRoles("restaurant"),
+  async (req, res) => {
+    try {
+      const restaurant = await Restaurant.findOne({ ownerId: req.user.id });
+      if (!restaurant)
+        return res.status(404).json({ message: "Restaurant not found" });
+
+      const category = await Category.findOne({
+        _id: req.body.categoryId,
+        restaurantId: restaurant._id,
+      });
+
+      if (!category)
+        return res.status(400).json({
+          message: "This category does not belong to your restaurant",
+        });
+
+      let image_url = null;
+
+      if (req.files && req.files.image) {
+        const upload = await cloudinary.uploader.upload(req.files.image.tempFilePath, {
+          folder: "food-delivery/menu",
+        });
+        image_url = upload.secure_url;
+      }
+
+      const item = await MenuItem.create({
+        name: req.body.name,
+        description: req.body.description,
+        price: parseFloat(req.body.price),
+        categoryId: req.body.categoryId,
+        restaurantId: restaurant._id,
+        image_url,
+      });
+
+      res.json({ message: "Menu item created", item });
+
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+);
+
+/* ============================================================
+ * GET MENU BY RESTAURANT
+ * ============================================================ */
+router.get("/:restaurantId/menu", async (req, res) => {
+  try {
+    const menuItems = await MenuItem.find({
+      restaurantId: req.params.restaurantId,
+    }).populate("categoryId", "name");
+
+    res.json(menuItems.map((item) => ({
+      _id: item._id,
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      image_url: item.image_url,
+      categoryId: item.categoryId?._id,
+      categoryName: item.categoryId?.name,
+    })));
+
+  } catch {
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+/* ============================================================
+ * DELETE MENU ITEM
+ * ============================================================ */
+router.delete(
+  "/menu/:id",
+  verifyToken,
+  allowRoles("restaurant"),
+  async (req, res) => {
+    try {
+      const restaurant = await Restaurant.findOne({ ownerId: req.user.id });
+
+      const menuItem = await MenuItem.findById(req.params.id);
+
+      if (!menuItem)
+        return res.status(404).json({ message: "Menu item not found" });
+
+      if (menuItem.restaurantId.toString() !== restaurant._id.toString())
+        return res.status(403).json({
+          message: "You cannot delete menu items from another restaurant",
+        });
+
+      await menuItem.deleteOne();
+      res.json({ message: "Menu item deleted" });
+
+    } catch {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+);
+
+module.exports = router;
