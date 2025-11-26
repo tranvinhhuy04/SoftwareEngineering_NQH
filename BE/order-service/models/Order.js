@@ -1,58 +1,54 @@
 const mongoose = require("mongoose");
 
-const orderSchema = new mongoose.Schema({
-  customerId: String,
-  restaurantId: String,
-  items: [
-    {
-      name: String,
-      quantity: Number,
-      price: Number,
+const orderSchema = new mongoose.Schema(
+  {
+    customerEmail: { type: String, required: true },
+
+    restaurantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Restaurant",
+      required: true,
     },
-  ],
-  total: Number,
-  status: {
-    type: String,
-    enum: ["pending", "accepted", "in-transit", "delivered"],
-    default: "pending",
-  },
-  deliveryPersonId: String,
 
-  // ✅ Location cũ – giữ lại để không ảnh hưởng gì
-  location: {
-    address: String,
-    coordinates: {
-      lat: Number,
-      lng: Number,
+    totalAmount: { type: Number, required: true },
+
+    orderStatus: {
+      type: String,
+      enum: ["pending", "accepted", "in-transit", "delivered"],
+      default: "pending",
     },
-  },
 
-  // ✅ Thêm đúng field đang dùng trong route /order/create
-  deliveryLocation: {
-    latitude: Number,
-    longitude: Number,
-    address: String,
-  },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "paid", "failed"],
+      default: "pending",
+    },
 
-  restaurantLocation: {
-    latitude: Number,
-    longitude: Number,
-    address: String,
-  },
+    orderDate: { type: Date, default: Date.now },
 
-  // ✅ Thêm chọn phương thức giao
-  deliveryMethod: {
-    type: String,
-    enum: ["delivery", "drone"],
-    default: "delivery",
-  },
+    deliveryMethod: {
+      type: String,
+      enum: ["delivery", "drone"],
+      default: "delivery",
+    },
 
-  droneLocation: {
-    latitude: Number,
-    longitude: Number,
-  },
+    deliveryLocation: {
+      latitude: Number,
+      longitude: Number,
+      address: String,
+    },
 
-  paymentIntentId: String,
-});
+    restaurantLocation: {
+      latitude: Number,
+      longitude: Number,
+      address: String,
+    },
+
+    deliveryPersonEmail: { type: String },
+
+    paymentIntentId: String,
+  },
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("Order", orderSchema);
