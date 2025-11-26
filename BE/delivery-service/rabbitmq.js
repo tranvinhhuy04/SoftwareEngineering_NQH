@@ -6,25 +6,60 @@ let channel = null;
 
 const EXCHANGE_NAME = "foodfast.events";
 const EXCHANGE_TYPE = "topic";
+const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://rabbitmq:5672";
 
-// 🎯 Kết nối 1 lần, tái sử dụng
-async function getChannel() {
-  if (channel) return channel;
 
-  const url = process.env.RABBITMQ_URL || "amqp://rabbitmq:5672";
+// ======================================================
+// 🔥 CONNECT + RETRY + AUTO-RECONNECT
+// ======================================================
+async function connectRabbitMQ(retries = 20, delay = 3000) {
+  while (retries > 0) {
+    try {
+      connection = await amqp.connect(RABBITMQ_URL);
 
-  connection = await amqp.connect(url);
-  channel = await connection.createChannel();
+      // Reconnect khi connection bị đóng
+      connection.on("close", () => {
+        console.error("[RabbitMQ] Connection closed. Reconnecting...");
+        connection = null;
+        channel = null;
+        connectRabbitMQ().catch(() => {});
+      });
 
-  await channel.assertExchange(EXCHANGE_NAME, EXCHANGE_TYPE, {
-    durable: true,
-  });
+      connection.on("error", (err) => {
+        console.error("[RabbitMQ] Connection error:", err.message);
+      });
 
-  console.log("[RabbitMQ] Channel ready:", EXCHANGE_NAME);
-  return channel;
+      channel = await connection.createChannel();
+      await channel.assertExchange(EXCHANGE_NAME, EXCHANGE_TYPE, {
+        durable: true,
+      });
+
+      console.log("[RabbitMQ] Connected & Channel ready:", EXCHANGE_NAME);
+      return channel;
+
+    } catch (err) {
+      console.error(`[RabbitMQ] Retry in ${delay / 1000}s...`, err.message);
+      retries--;
+      await new Promise((res) => setTimeout(res, delay));
+    }
+  }
+
+  throw new Error("[RabbitMQ] Failed to connect after retries!");
 }
 
-// 🎯 Publish event
+
+// ======================================================
+// 🔥 GET CHANNEL (tự động reconnect + retry)
+// ======================================================
+async function getChannel() {
+  if (channel) return channel;
+  return await connectRabbitMQ();
+}
+
+
+// ======================================================
+// 🔥 PUBLISH EVENT
+// ======================================================
 async function publishEvent(routingKey, payload) {
   const ch = await getChannel();
 
@@ -41,7 +76,10 @@ async function publishEvent(routingKey, payload) {
   console.log(`[RabbitMQ] Published: ${routingKey}`, payload);
 }
 
-// 🎯 Subscribe event
+
+// ======================================================
+// 🔥 SUBSCRIBE EVENT
+// ======================================================
 async function subscribeEvent(queueName, bindingKeys, handler) {
   const ch = await getChannel();
 
@@ -64,13 +102,15 @@ async function subscribeEvent(queueName, bindingKeys, handler) {
     try {
       const content = JSON.parse(msg.content.toString());
       await handler(content.payload, content);
+
       ch.ack(msg);
     } catch (err) {
       console.error("[RabbitMQ] Handler error:", err.message);
-      ch.nack(msg, false, false); // không requeue
+      ch.nack(msg, false, false);
     }
   });
 }
+
 
 module.exports = {
   publishEvent,
