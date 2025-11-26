@@ -1,14 +1,14 @@
-import * as bcrypt from 'bcrypt';
 import { Injectable } from '@nestjs/common';
-import { IPasswordHashService } from 'src/auth/domain/services/password-hash.service';
+import * as bcrypt from 'bcrypt';
+import { IPasswordHashService } from '../../domain/responsitories/auth.respository';
 
 @Injectable()
 export class BcryptPasswordService implements IPasswordHashService {
   async hash(password: string): Promise<string> {
-    const salt = await bcrypt.genSalt(10);
-    return bcrypt.hash(password, salt);
+    return bcrypt.hash(password, 10);
   }
-  async compare(raw: string, hashed: string): Promise<boolean> {
-    return bcrypt.compare(raw, hashed);
+
+  async compare(password: string, hash: string): Promise<boolean> {
+    return bcrypt.compare(password, hash);
   }
 }

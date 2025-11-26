@@ -1,23 +1,37 @@
-import { Controller, Logger } from '@nestjs/common';
+import { Controller, Post, Body, Logger } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { RegisterUserUseCase } from 'src/auth/application/use-cases/register-user.usecase';
-import { LoginDto } from '../application/dto/login.dto';
+import { RegisterUserUseCase } from '../application/use-cases/register-user.usecase';
 import { LoginUseCase } from '../application/use-cases/login.usecase';
+import { RegisterUserDto } from '../application/dto/register-user.dto';
+import { LoginDto } from '../application/dto/login.dto';
 
-@Controller()
+@Controller('auth')
 export class AuthController {
   constructor(
     private readonly registerUC: RegisterUserUseCase,
     private readonly loginUseCase: LoginUseCase, 
 ) {}
 
-  @MessagePattern({ cmd: 'register' })
-  async register(@Payload() dto: { userId: string; email: string; password: string; role: string }) {
-    Logger.debug(JSON.stringify(dto, null, 2))
+  // 👉 REST API
+  @Post('register')
+  async httpRegister(@Body() dto: RegisterUserDto) {
+    Logger.debug('HTTP Register DTO: ' + JSON.stringify(dto));
     return this.registerUC.execute(dto);
   }
 
-  @MessagePattern({ cmd: "login_user" })
+  // 👉 Microservice Pattern
+  @MessagePattern({ cmd: 'register' })
+  async register(@Payload() dto: RegisterUserDto) {
+    Logger.debug('RMQ Register DTO: ' + JSON.stringify(dto));
+    return this.registerUC.execute(dto);
+  }
+
+  @Post('login')
+  async httpLogin(@Body() dto: LoginDto) {
+    return this.loginUseCase.execute(dto);
+  }
+
+  @MessagePattern({ cmd: 'login_user' })
   async login(@Payload() dto: LoginDto) {
     return this.loginUseCase.execute(dto);
   }

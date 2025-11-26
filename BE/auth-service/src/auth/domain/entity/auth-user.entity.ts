@@ -1,14 +1,12 @@
-import { Schema, model, Document } from 'mongoose';
-
-export class UserAuth {
+export class AuthUserEntity {
   constructor(
-    public readonly id: string,
-    public readonly userId: string,
-    public readonly email: string,
-    public readonly passwordHash: string,
-    public readonly isActive: boolean,
-    public readonly role: string,  // ✅ Thêm field role
-    public readonly createdAt: Date,
-    public readonly updatedAt: Date,
+    public id: string,
+    public userId: string,
+    public email: string,
+    public passwordHash: string,
+    public isActive: boolean = true,
+    public userType: string = 'customer',
+    public createdAt: Date = new Date(),
+    public updatedAt: Date = new Date(),
   ) {}
 }

@@ -1,74 +1,34 @@
 import { Module } from '@nestjs/common';
-import { ClientsModule, Transport } from '@nestjs/microservices';
-import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigModule } from '@nestjs/config';
-
-// 🧩 Import adapter, services, controller, use case
-import { UserServiceRmqAdapter } from './infrastructure/adapters/user-service-rmq.adapter';
-import { RegisterUserUseCase } from './application/use-cases/register-user.usecase';
-import { BcryptPasswordService } from './infrastructure/services/bcrypt-password.service';
-
-// 🧩 Constants
-import { USER_SERVICE } from './contact/services/services';
 import { AuthController } from './presentation/auth.controller';
-import { AuthUserSchema,AuthUserSchemaDef } from './infrastructure/database/authUser.schema';
-import { UserAuthMongoRepository } from './infrastructure/repositories/auth.respository.imp';
+import { MongooseModule } from '@nestjs/mongoose';
+import { AuthUser, AuthUserSchema } from './infrastructure/database/auth-user.schema';
+
+import { RegisterUserUseCase } from './application/use-cases/register-user.usecase';
 import { LoginUseCase } from './application/use-cases/login.usecase';
+
+import { AuthRepositoryImpl } from './infrastructure/repositories/auth.respository.imp';
+import { BcryptPasswordService } from './infrastructure/services/bcrypt-password.service';
 import { JwtTokenService } from './infrastructure/services/jwt-token.service';
+
+import {
+  IAuthRepository,
+  IPasswordHashService,
+  ITokenService
+} from './domain/responsitories/auth.respository';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-
-    // 🧱 Kết nối MongoDB (AuthService database)
     MongooseModule.forFeature([
-      { name: AuthUserSchema.name, schema: AuthUserSchemaDef },
-    ]),
-
-    // 🧩 Kết nối tới UserService qua RabbitMQ
-    ClientsModule.register([
-      {
-        name: USER_SERVICE,
-        transport: Transport.RMQ,
-        options: {
-          urls: [process.env.RABBITMQ_URI || 'amqp://localhost:5672'],
-          queue: 'users_queue',
-          queueOptions: { durable: false },
-        },
-      },
+      { name: AuthUser.name, schema: AuthUserSchema },  // ✔ CHỈ DÒNG NÀY QUAN TRỌNG
     ]),
   ],
-
   controllers: [AuthController],
-
   providers: [
-    // 🧩 Repository interface implementation
-    {
-      provide: 'IUserAuthRepository',
-      useClass: UserAuthMongoRepository, // ✅ ánh xạ đúng repo
-    },
-
-    // 🧩 Hash Service (mã hóa mật khẩu)
-    {
-      provide: 'IPasswordHashService',
-      useClass: BcryptPasswordService,
-    },
-
-    // 🧩 Adapter gửi request sang UserService
-    {
-      provide: 'IUserServiceAdapter',
-      useClass: UserServiceRmqAdapter,
-    },
-    {
-      provide: 'ITokenService',
-      useClass: JwtTokenService,
-    },
-
-    // 🧩 Use Case
     RegisterUserUseCase,
-    LoginUseCase
+    LoginUseCase,
+    { provide: IAuthRepository, useClass: AuthRepositoryImpl },
+    { provide: IPasswordHashService, useClass: BcryptPasswordService },
+    { provide: ITokenService, useClass: JwtTokenService },
   ],
-
-  exports: ['IUserServiceAdapter'],
 })
 export class AuthModule {}
