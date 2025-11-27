@@ -77,15 +77,30 @@ function mountRoutes(app) {
   );
 
   // ✅ Payment Service
-  app.use(
-    "/payment",
-    createProxyMiddleware({
-      target: "http://payment-service:5008", // port payment-service chạy trong Docker
-      changeOrigin: true,
-      pathRewrite: { "^/payment": "" },
-      logLevel: "debug",
-    })
-  );
+app.use(
+  "/payment",
+  createProxyMiddleware({
+    target: "http://payment-service:5008",
+    changeOrigin: true,
+    pathRewrite: { "^/payment": "" },
+    logLevel: "debug",
+
+    onProxyReq: (proxyReq, req) => {
+      // Forward Authorization header
+      if (req.headers["authorization"]) {
+        proxyReq.setHeader("Authorization", req.headers["authorization"]);
+      }
+
+      // Forward body for POST/PUT/PATCH
+      if (req.body && Object.keys(req.body).length) {
+        const bodyData = JSON.stringify(req.body);
+        proxyReq.setHeader("Content-Type", "application/json");
+        proxyReq.setHeader("Content-Length", Buffer.byteLength(bodyData));
+        proxyReq.write(bodyData);
+      }
+    }
+  })
+);
 }
 
 module.exports = { mountRoutes };

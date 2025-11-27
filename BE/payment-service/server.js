@@ -1,23 +1,24 @@
-// server.js (payment-service) — BẢN CHUẨN
-require("dotenv").config(); // ➊ PHẢI đứng đầu tiên
+// server.js (payment-service)
+require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 
 const app = express();
-require("./rabbitmq");  
+require("./rabbitmq");
+
 app.use(cors());
 app.use(express.json());
 
-// ➋ Kết nối Mongo chỉ làm ở đây (đừng connect trong routes)
+// Mongo connect
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Connected to MongoDB"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+  .catch((err) => console.error("❌ MongoDB error:", err));
 
-// ➌ CHỈ require routes SAU KHI dotenv đã nạp
-const paymentRoutes = require("./routes/paymentRoutes");
+// Routes
+const paymentRoutes = require("./routes/paymentVnpay");
 app.use("/", paymentRoutes);
 
 const PORT = process.env.PORT || 5008;
