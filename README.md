@@ -29,3 +29,16 @@ _Trường Đại học Sài Gòn_
 ## 📝 Sản phẩm
 - Report: https://docs.google.com/document/d/1zPx6X-3frHWjnj4Luw2A6X1V8MSxzXzFsnEXEflehkU/edit?usp=drive_link
 - Mã nguồn và demo lưu trữ tại repo: https://github.com/tranvinhhuy04/SoftwareEngineering_NQH
+
+## Hướng dẫn run product
+- Backend 
+```
+docker-compose up --build
+```
+
+- FontEnd
+```
+docker build -t vite-fe .
+docker run -d -p 3000:80 vite-fe
+```
+
