@@ -19,27 +19,23 @@ app.use("/", deliveryRoutes);
 const ORDER_SERVICE_URL =
   process.env.ORDER_SERVICE_URL || "http://order-service:5003";
 
-
 // --------------------------------------------------
-// 🔔 SUBSCRIBE EVENT: order.accepted  (QUAN TRỌNG NHẤT)
+// 🔔 LISTEN event "order.accepted"
 // --------------------------------------------------
-
 subscribeEvent(
-  "delivery.accept.queue",   // tên queue tạo riêng cho delivery
-  ["order.accepted"],        // listen routing key
+  "delivery.accept.queue",
+  ["order.accepted"],
   async (payload) => {
     console.log("📥 [Delivery] Received order.accepted:", payload);
 
-    // Khi restaurant accept đơn → đơn phải đưa vào trạng thái “available”
     await axios.patch(
-      `${ORDER_SERVICE_URL}/status/${payload.orderId}`,
-      { status: "available" }
+      `${ORDER_SERVICE_URL}/order/${payload.orderId}/status`,
+      { status: "accepted" }
     );
 
-    console.log("🟢 Order now AVAILABLE for delivery:", payload.orderId);
+    console.log("🟢 Order set to ACCEPTED:", payload.orderId);
   }
 );
-
 
 // --------------------------------------------------
 

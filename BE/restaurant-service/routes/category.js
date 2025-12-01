@@ -35,7 +35,7 @@ router.post(
 );
 
 /* ============================================================
- * GET CUSTOMER CATEGORY BY RESTAURANT
+ * GET CATEGORY BY RESTAURANT
  * ============================================================ */
 router.get("/:restaurantId/category", async (req, res) => {
   try {
