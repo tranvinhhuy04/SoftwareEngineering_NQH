@@ -174,7 +174,7 @@ return (
             onChange={(e) => setSelectedRestaurant(e.target.value)}
             className="border border-gray-300 rounded-full px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 shadow-sm"
           >
-            <option value="all">All Restaurants</option>
+            <option value="all">Select Restaurants.....</option>
             {restaurants.map((r) => (
               <option key={r._id} value={r._id}>
                 {r.name}

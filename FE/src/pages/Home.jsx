@@ -23,16 +23,27 @@ const Home = () => {
 
         {/* ================== NAV ================== */}
         <nav className="relative z-10 flex justify-between items-center px-6 py-6">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <Menu size={26} className="text-black cursor-pointer" />
-            <h1 className="font-extrabold text-2xl tracking-wide">
+
+          {/* Logo + Menu Button */}
+          <div className="flex items-center gap-4">
+            {/* Menu Button → chuyển đến trang HomeAll */}
+            <button
+              onClick={() => window.location.href = "/home"}
+              className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full text-sm hover:bg-gray-900 transition"
+            >
+              <Menu size={20} />
+              Menu
+            </button>
+
+            {/* Logo */}
+            <h1 className="font-extrabold text-2xl tracking-wide cursor-pointer"
+                onClick={() => window.location.href = "/"}>
               <span className="text-black">Fast</span>
               <span className="text-red-600">Food</span>
             </h1>
           </div>
 
-          {/* Auth */}
+          {/* Auth Section */}
           <div className="flex gap-3">
             {localStorage.getItem('user') ? (
               <button
@@ -61,7 +72,9 @@ const Home = () => {
               </>
             )}
           </div>
+
         </nav>
+
 
         {/* ================== HERO CONTENT ================== */}
         <main className="relative z-10 px-6 pt-12 w-full md:w-1/2 text-center md:text-left">
