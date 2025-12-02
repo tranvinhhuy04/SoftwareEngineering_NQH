@@ -42,3 +42,10 @@ docker build -t vite-fe .
 docker run -d -p 3000:80 vite-fe
 ```
 
+<div style="border: 2px solid #3b82f6; border-radius: 8px; padding: 16px; margin: 12px 0; background: #eff6ff;">
+  <h3 style="margin-top: 0;">🔵 GET /restaurant/api/restaurants-id</h3>
+
+  <pre style="background:#1e293b; color:white; padding:12px; border-radius:6px; overflow:auto;">
+GET http://localhost:8000/restaurant/api/restaurants-id
+  </pre>
+</div>

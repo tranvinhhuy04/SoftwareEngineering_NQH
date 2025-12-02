@@ -44,54 +44,134 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white p-4 px-6">
-      <div className="w-full max-w-md flex flex-col items-center">
+    <div className="min-h-screen flex items-center justify-center 
+                    bg-gradient-to-br from-green-400 via-green-300 to-yellow-200 
+                    p-6">
+
+      {/* Glass Card */}
+      <div className="w-full max-w-md bg-white/70 backdrop-blur-xl shadow-xl 
+                      rounded-2xl p-8 border border-white/40">
+
         {/* Logo */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-black">Login</h1>
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-extrabold text-gray-900">Welcome Back</h1>
+          <p className="text-gray-700 mt-2">Log in to continue your food journey</p>
         </div>
 
-        {/* Form Section */}
-        <form onSubmit={handleSubmit} className="w-full space-y-4">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+
+          {/* Email */}
           <div>
-            <label className="block text-xl font-semibold text-black mb-2">
+            <label className="block text-lg font-semibold text-gray-900 mb-2">
               What's your email?
             </label>
-            <input
-              type="text"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="Enter phone number or email"
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 placeholder-gray-400"
-              required
-            />
+
+            <div className="flex items-center bg-white rounded-lg px-4 py-3 
+                            border border-gray-300 shadow-sm 
+                            focus-within:ring-2 focus-within:ring-green-400">
+              
+              <svg
+                className="w-5 h-5 text-green-600 mr-3"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round"
+                  d="M16 12H8m8 0l-4 4m4-4l-4-4"
+                />
+              </svg>
+
+              <input
+                type="text"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="Enter email"
+                className="w-full outline-none bg-transparent text-gray-800"
+                required
+              />
+            </div>
           </div>
 
+          {/* Password */}
           <div>
-            <label className="block text-xl font-semibold text-black mb-2">
+            <label className="block text-lg font-semibold text-gray-900 mb-2">
               What's your password?
             </label>
-            <input
-              type="password"
-              name="password"
-              value={form.password || ""}
-              onChange={handleChange}
-              placeholder="Enter your password"
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 placeholder-gray-400"
-              required
-            />
+
+            <div className="flex items-center bg-white rounded-lg px-4 py-3
+                            border border-gray-300 shadow-sm
+                            focus-within:ring-2 focus-within:ring-green-400">
+
+              <svg
+                className="w-5 h-5 text-green-600 mr-3"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round"
+                  d="M12 11c1.1 0 2-.9 2-2s-.9-2-2-2
+                    -2 .9-2 2 .9 2 2 2zm0 0
+                    c-4.4 0-8 2.2-8 5v2h16v-2
+                    c0-2.8-3.6-5-8-5z"
+                />
+              </svg>
+
+              <input
+                type="password"
+                name="password"
+                value={form.password || ""}
+                onChange={handleChange}
+                placeholder="Enter password"
+                className="w-full outline-none bg-transparent text-gray-800"
+                required
+              />
+            </div>
+
+            <div className="text-right mt-2">
+              <a href="/forgot-password"
+                className="text-sm text-green-700 hover:text-green-900 transition">
+                Forgot password?
+              </a>
+            </div>
           </div>
 
+          {/* Login Button */}
           <button
             type="submit"
-            className="w-full bg-black hover:bg-gray-800 text-white py-3 rounded-lg font-semibold transition"
+            className="w-full py-3 rounded-xl text-lg font-semibold text-white
+                      bg-black hover:bg-gray-900 transition shadow"
             disabled={loading}
           >
             {loading ? "Continuing..." : "Continue"}
           </button>
+
+          {/* Divider */}
+          <div className="relative my-6 text-center">
+            <span className="text-gray-500 text-sm bg-white/80 px-2 relative z-10">
+              or continue with
+            </span>
+            <div className="absolute top-3 left-0 right-0 h-px bg-gray-300"></div>
+          </div>
+
+          {/* Social Login */}
+          <div className="flex justify-center gap-4">
+            <button className="w-12 h-12 bg-white shadow-md rounded-full 
+                              flex items-center justify-center hover:bg-gray-100 transition">
+              <img src="https://cdn-icons-png.flaticon.com/512/300/300221.png" className="w-7" />
+            </button>
+            <button className="w-12 h-12 bg-white shadow-md rounded-full 
+                              flex items-center justify-center hover:bg-gray-100 transition">
+              <img src="https://cdn-icons-png.flaticon.com/512/124/124010.png" className="w-7" />
+            </button>
+          </div>
         </form>
       </div>
     </div>
   );
+
+
 }

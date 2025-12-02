@@ -302,4 +302,5 @@ stringData:
   EMAIL_PASS: "yourappassword"
   STRIPE_SECRET_KEY: "sk_test_xxxxxxxxxxxxxxxxxxxx"
   JWT_SECRET: "yourjwtsecret"
+  REACT_APP_GOOGLE_MAP_API_KEY: "apiiiiiiiiiiiiiiiiiiiiiiiii"
 

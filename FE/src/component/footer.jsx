@@ -3,7 +3,6 @@ import React from 'react';
 const Footer = () => {
     return (
         <>
-        
         <footer className="w-full">
             <div className="mx-auto max-w-7xl px-0 sm:</footer>px-0 lg:px-0">
                 {/*Grid*/}
