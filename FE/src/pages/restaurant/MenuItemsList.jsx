@@ -117,7 +117,9 @@ const MenuItemsList = () => {
       {/* MAIN */}
       <main className="container mx-auto px-4 py-10">
 
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">
+        <h2 className="text-4xl font-extrabold text-center mb-10 
+                       bg-gradient-to-r from-green-500 to-yellow-400 
+                       bg-clip-text text-transparent">
           Your Menu Items
         </h2>
 {/* ------------------ SELECT RESTAURANT ------------------ */}

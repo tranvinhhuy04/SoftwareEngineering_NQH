@@ -100,7 +100,7 @@ const MenuCategories = () => {
      🟦 UI RENDER
   ============================================================ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-100 via-yellow-50 to-white flex flex-col text-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-yellow-50 flex flex-col text-gray-900">
 
       {/* HEADER */}
       <header className="bg-white/70 backdrop-blur-md shadow-md py-4 border-b border-green-200">

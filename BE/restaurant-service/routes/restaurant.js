@@ -2,18 +2,21 @@ const express = require("express");
 const router = express.Router();
 
 const Restaurant = require("../models/Restaurant");
+const Category = require("../models/Category");   
+const MenuItem = require("../models/MenuItem");
+
 const { verifyToken, allowRoles } = require("../utils/authMiddleware");
 const axios = require("axios");
 
 /* ============================================================
- * GET ALL RESTAURANTS (Public)
+ * GET ALL RESTAURANTS
  * ============================================================ */
 router.get("/getAllRestaurant", async (req, res) => {
   try {
     const restaurants = await Restaurant.find();
     res.json(restaurants);
-  } catch (err) {
-    return res.status(500).json({ message: "Internal server error" });
+  } catch {
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
@@ -24,8 +27,8 @@ router.get("/api/restaurants-id", verifyToken, async (req, res) => {
   try {
     const restaurants = await Restaurant.find({ ownerId: req.user.id });
     res.json(restaurants);
-  } catch (err) {
-    return res.status(500).json({ message: "Internal server error" });
+  } catch {
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
@@ -38,53 +41,90 @@ router.post(
   allowRoles("restaurant"),
   async (req, res) => {
     try {
-      const restaurant = new Restaurant({
+      const restaurant = await Restaurant.create({
         name: req.body.name,
         ownerId: req.user.id,
         isOpen: true,
-        avatar: req.body.avatar,
-        address: req.body.address,
-        phone_number: req.body.phone_number,
+        avatar: req.body.avatar || null,
+        address: req.body.address || null,
+        phone_number: req.body.phone_number || null,
       });
 
-      await restaurant.save();
       res.json({ message: "Restaurant profile created", restaurant });
     } catch (err) {
-      return res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Internal server error" });
     }
   }
 );
 
 /* ============================================================
- * ACCEPT ORDER
+ * DELETE RESTAURANT (Only owner)
  * ============================================================ */
-router.post(
-  "/accept-order",
+router.delete(
+  "/profile/:id",
   verifyToken,
   allowRoles("restaurant"),
   async (req, res) => {
     try {
-      const { orderId } = req.body;
-      if (!orderId) return res.status(400).json({ message: "orderId is required" });
+      const restaurantId = req.params.id;
 
-      const ORDER_SERVICE_URL =
-        process.env.ORDER_SERVICE_URL || "http://order-service:5003";
+      console.log("🔥 DELETE → restaurantId FE gửi:", restaurantId);
 
-      const response = await axios.patch(
-        `${ORDER_SERVICE_URL}/status/${orderId}`,
-        { status: "accepted" },
-        { headers: { Authorization: req.headers.authorization } }
-      );
+      // 1️⃣ Kiểm tra có tồn tại restaurant không
+      const restaurant = await Restaurant.findById(restaurantId);
+      console.log("🟨 Restaurant tìm được:", restaurant);
 
-      return res.json({
-        message: "Order accepted by restaurant",
-        order: response.data.order,
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      // 2️⃣ Kiểm tra đúng owner không (ownerId là String)
+      if (restaurant.ownerId !== req.user.id) {
+        console.log("❌ restaurant.ownerId:", restaurant.ownerId, "req.user.id:", req.user.id);
+        return res.status(403).json({
+          message: "You are not allowed to delete this restaurant",
+        });
+      }
+
+      // 3️⃣ Kiểm tra restaurant có Category không
+      const categoriesCount = await Category.countDocuments({
+        restaurantId: restaurantId,
       });
 
+      if (categoriesCount > 0) {
+        return res.status(400).json({
+          message:
+            "Please delete all categories of this restaurant before deleting it.",
+        });
+      }
+
+      // 4️⃣ Kiểm tra restaurant có Menu Items không (dùng MenuItem, KHÔNG phải Menu)
+      const menuCount = await MenuItem.countDocuments({
+        restaurantId: restaurantId,
+      });
+
+      if (menuCount > 0) {
+        return res.status(400).json({
+          message:
+            "Please delete menu items of this restaurant before deleting it.",
+        });
+      }
+
+      // 5️⃣ Xoá restaurant
+      await Restaurant.findByIdAndDelete(restaurantId);
+
+      res.json({
+        message: "Restaurant deleted successfully",
+        restaurantId,
+      });
     } catch (err) {
-      return res.status(500).json({ message: "Internal server error" });
+      console.error("Delete error:", err);
+      return res.status(500).json({
+        message: "Internal server error",
+      });
     }
   }
 );
+
 
 module.exports = router;
