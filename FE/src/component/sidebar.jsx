@@ -18,366 +18,162 @@ const Sidebar = ({ user }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Close sidebar when route changes (mobile)
+  // Close on route change (mobile)
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);
 
-  // Handle logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     navigate("/login");
   };
 
-  // Get user role
   const role = user?.role || localStorage.getItem("role");
 
-  // Check roles
   const isRestaurant = role === "restaurant";
   const isCustomer = role === "customer";
   const isDelivery = role === "delivery";
   const isAdmin = role === "admin";
 
-  // Check if a route is active
   const isActive = (path) => location.pathname === path;
+
+  // 🟢 STYLE A CLASS SET
+  const linkClass = (path) =>
+    `flex items-center px-4 py-3 rounded-xl transition 
+     border ${isActive(path)
+       ? "bg-green-500 text-white border-green-600 shadow"
+       : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+     }`;
+
+  const labelClass = `ml-3 font-medium`;
 
   return (
     <>
-      {/* Mobile Menu Button */}
+      {/* Mobile Toggle Button */}
       <div className="md:hidden fixed top-4 left-4 z-40">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="p-2 bg-gray-900 rounded-md text-white hover:bg-gray-800 transition duration-200"
+          className="p-2 rounded-lg bg-white shadow border hover:bg-gray-100 transition"
         >
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
+          {isOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-full bg-gray-900 text-white z-30 transition-all duration-300 ease-in-out shadow-lg
-                    ${
-                      isOpen
-                        ? "w-64 translate-x-0"
-                        : "w-64 -translate-x-full md:translate-x-0 md:w-20 lg:w-64"
-                    }`}
+        className={`
+          fixed top-0 left-0 h-full bg-white border-r shadow-lg z-30
+          transition-all duration-300 ease-in-out
+          ${isOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full md:translate-x-0 md:w-64"}
+        `}
       >
         {/* Logo */}
-        <div className="p-4 border-b border-gray-800">
-          <div className="flex items-center justify-center md:justify-start">
-            <div className="bg-yellow-500 rounded-md p-2">
-              <Coffee
-                className="text-black"
-                size={isOpen || window.innerWidth >= 1024 ? 24 : 20}
-              />
-            </div>
-            <h1
-              className={`ml-2 font-bold text-xl ${
-                !isOpen && window.innerWidth < 1024 ? "hidden" : "block"
-              }`}
-            >
-              <span className="text-white">Fast</span>
-              <span className="text-green-500">food</span>
-            </h1>
+        <div className="flex items-center gap-3 p-6 border-b">
+          <div className="bg-green-500 p-2 rounded-lg">
+            <Coffee className="text-white" size={24} />
           </div>
+          <h1
+              className="font-extrabold text-2xl tracking-wide cursor-pointer"
+              onClick={() => (window.location.href = "/")}
+            >
+              <span className="text-black">Fast</span>
+              <span className="text-green-600">Food</span>
+            </h1>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="p-4">
-          <ul className="space-y-2">
-            <li>
-              {isRestaurant || isDelivery || isAdmin ? (
-                <div
-                  className={`flex items-center p-3 rounded-md transition-colors duration-200 text-gray-300 cursor-default`}
-                >
-                  <Home size={20} />
-                  <span
-                    className={`ml-3 ${
-                      !isOpen && window.innerWidth < 1024 ? "hidden" : "block"
-                    }`}
-                  >
-                    Home
-                  </span>
-                </div>
-              ) : (
-                <Link
-                  to="/home"
-                  className={`flex items-center p-3 rounded-md transition-colors duration-200 ${
-                    isActive("/home")
-                      ? "bg-yellow-500 text-black"
-                      : "hover:bg-gray-800"
-                  }`}
-                >
-                  <Home size={20} />
-                  <span
-                    className={`ml-3 ${
-                      !isOpen && window.innerWidth < 1024 ? "hidden" : "block"
-                    }`}
-                  >
-                    Home
-                  </span>
-                </Link>
-              )}
-            </li>
+        {/* Navigation */}
+        <nav className="p-4 space-y-3">
 
-            {/* Restaurant Links */}
-            {isRestaurant && (
-              <>
-                <li>
-                  <Link
-                    to="/restaurant/profile"
-                    className={`flex items-center p-3 rounded-md transition-colors duration-200 ${
-                      isActive("/restaurant/profile")
-                        ? "bg-yellow-500 text-black"
-                        : "hover:bg-gray-800"
-                    }`}
-                  >
-                    <User size={20} />
-                    <span
-                      className={`ml-3 ${
-                        !isOpen && window.innerWidth < 1024 ? "hidden" : "block"
-                      }`}
-                    >
-                      Restaurant Profile
-                    </span>
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/restaurant/menu"
-                    className={`flex items-center p-3 rounded-md transition-colors duration-200
-                               ${
-                                 isActive("/restaurant/menu")
-                                   ? "bg-yellow-500 text-black"
-                                   : "hover:bg-gray-800"
-                               }`}
-                  >
-                    <Coffee size={20} />
-                    <span
-                      className={`ml-3 ${
-                        !isOpen && window.innerWidth < 1024 ? "hidden" : "block"
-                      }`}
-                    >
-                      Menu Items
-                    </span>
-                  </Link>
-                </li>                
-                <li>
-                  <Link
-                    to="/restaurant/menu/categories"
-                    className={`flex items-center p-3 rounded-md transition-colors duration-200
-                               ${
-                                 isActive("/restaurant/menu/categories")
-                                   ? "bg-yellow-500 text-black"
-                                   : "hover:bg-gray-800"
-                               }`}
-                  >
-                    <Coffee size={20} />
-                    <span
-                      className={`ml-3 ${
-                        !isOpen && window.innerWidth < 1024 ? "hidden" : "block"
-                      }`}
-                    >
-                      Menu Categories
-                    </span>
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/restaurant/menu/add"
-                    className={`flex items-center p-3 rounded-md transition-colors duration-200
-                               ${
-                                 isActive("/restaurant/menu/add")
-                                   ? "bg-yellow-500 text-black"
-                                   : "hover:bg-gray-800"
-                               }`}
-                  >
-                    <ShoppingBag size={20} />
-                    <span
-                      className={`ml-3 ${
-                        !isOpen && window.innerWidth < 1024 ? "hidden" : "block"
-                      }`}
-                    >
-                      Add Menu Item
-                    </span>
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/restaurant/orders"
-                    className={`flex items-center p-3 rounded-md transition-colors duration-200
-                               ${
-                                 isActive("/restaurant/orders")
-                                   ? "bg-yellow-500 text-black"
-                                   : "hover:bg-gray-800"
-                               }`}
-                  >
-                    <FileText size={20} />
-                    <span
-                      className={`ml-3 ${
-                        !isOpen && window.innerWidth < 1024 ? "hidden" : "block"
-                      }`}
-                    >
-                      Incoming Orders
-                    </span>
-                  </Link>
-                </li>
-              </>
-            )}
+          {/* HOME */}
+          <Link to="/dashboard" className={linkClass("/dashboard")}>
+            <Home size={20} />
+            <span className={labelClass}>Home</span>
+          </Link>
 
-            {/* Customer Links */}
-            {isCustomer && (
-              <>
-                <li>
-                  <Link
-                    to="/create-order"
-                    className={`flex items-center p-3 rounded-md transition-colors duration-200
-                               ${
-                                 isActive("/create-order")
-                                   ? "bg-yellow-500 text-black"
-                                   : "hover:bg-gray-800"
-                               }`}
-                  >
-                    <ShoppingCart size={20} />
-                    <span
-                      className={`ml-3 ${
-                        !isOpen && window.innerWidth < 1024 ? "hidden" : "block"
-                      }`}
-                    >
-                      Place Order
-                    </span>
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/orders"
-                    className={`flex items-center p-3 rounded-md transition-colors duration-200
-                               ${
-                                 isActive("/orders")
-                                   ? "bg-yellow-500 text-black"
-                                   : "hover:bg-gray-800"
-                               }`}
-                  >
-                    <FileText size={20} />
-                    <span
-                      className={`ml-3 ${
-                        !isOpen && window.innerWidth < 1024 ? "hidden" : "block"
-                      }`}
-                    >
-                      My Orders
-                    </span>
-                  </Link>
-                </li>
-              </>
-            )}
+          {/* RESTAURANT */}
+          {isRestaurant && (
+            <>
+              <Link to="/restaurant/profile" className={linkClass("/restaurant/profile")}>
+                <User size={20} />
+                <span className={labelClass}>Restaurant Profile</span>
+              </Link>
 
-            {/* Delivery Person Links */}
-            {isDelivery && (
-              <>
-                <li>
-                  <Link
-                    to="/delivery-admin"
-                    className={`flex items-center p-3 rounded-md transition-colors duration-200
-                               ${
-                                 isActive("/delivery-admin")
-                                   ? "bg-yellow-500 text-black"
-                                   : "hover:bg-gray-800"
-                               }`}
-                  >
-                    <Truck size={20} />
-                    <span
-                      className={`ml-3 ${
-                        !isOpen && window.innerWidth < 1024 ? "hidden" : "block"
-                      }`}
-                    >
-                      My Orders
-                    </span>
-                  </Link>
-                </li>
-                {/* <li>
-                  <Link 
-                    to="/delivery/orders/all"
-                    className={`flex items-center p-3 rounded-md transition-colors duration-200
-                               ${isActive('/delivery/orders/all') ? 'bg-yellow-500 text-black' : 'hover:bg-gray-800'}`}
-                  >
-                    <FileText size={20} />
-                    <span className={`ml-3 ${!isOpen && window.innerWidth < 1024 ? 'hidden' : 'block'}`}>Available Orders</span>
-                  </Link>
-                </li> */}
-              </>
-            )}
+              <Link to="/restaurant/menu" className={linkClass("/restaurant/menu")}>
+                <Coffee size={20} />
+                <span className={labelClass}>Menu Items</span>
+              </Link>
 
-            {/* Admin Links */}
-            {isAdmin && (
-              <>
-                <li>
-                  <Link
-                    to="/admin/dashboard"
-                    className={`flex items-center p-3 rounded-md transition-colors duration-200
-                               ${
-                                 isActive("/admin/dashboard")
-                                   ? "bg-yellow-500 text-black"
-                                   : "hover:bg-gray-800"
-                               }`}
-                  >
-                    <Home size={20} />
-                    <span
-                      className={`ml-3 ${
-                        !isOpen && window.innerWidth < 1024 ? "hidden" : "block"
-                      }`}
-                    >
-                      Admin Dashboard
-                    </span>
-                  </Link>
-                </li>
+              <Link to="/restaurant/menu/categories" className={linkClass("/restaurant/menu/categories")}>
+                <Coffee size={20} />
+                <span className={labelClass}>Menu Categories</span>
+              </Link>
 
-                <li>
-                  <Link
-                    to="/admin/drones"
-                    className={`flex items-center p-3 rounded-md transition-colors duration-200
-                               ${
-                                 isActive("/admin/drones")
-                                   ? "bg-yellow-500 text-black"
-                                   : "hover:bg-gray-800"
-                               }`}
-                  >
-                    <Truck size={20} />
-                    <span
-                      className={`ml-3 ${
-                        !isOpen && window.innerWidth < 1024 ? "hidden" : "block"
-                      }`}
-                    >
-                      Drone Management
-                    </span>
-                  </Link>
-                </li>
-              </>
-            )}
+              <Link to="/restaurant/menu/add" className={linkClass("/restaurant/menu/add")}>
+                <ShoppingBag size={20} />
+                <span className={labelClass}>Add Menu Item</span>
+              </Link>
 
-            <li className="mt-8">
-              <button
-                onClick={handleLogout}
-                className="flex items-center w-full p-3 rounded-md transition-colors duration-200 hover:bg-gray-800"
-              >
-                <LogOut size={20} />
-                <span
-                  className={`ml-3 ${
-                    !isOpen && window.innerWidth < 1024 ? "hidden" : "block"
-                  }`}
-                >
-                  Logout
-                </span>
-              </button>
-            </li>
-          </ul>
+              <Link to="/restaurant/orders" className={linkClass("/restaurant/orders")}>
+                <FileText size={20} />
+                <span className={labelClass}>Incoming Orders</span>
+              </Link>
+            </>
+          )}
+
+          {/* CUSTOMER */}
+          {isCustomer && (
+            <>
+              <Link to="/create-order" className={linkClass("/create-order")}>
+                <ShoppingCart size={20} />
+                <span className={labelClass}>Place Order</span>
+              </Link>
+
+              <Link to="/orders" className={linkClass("/orders")}>
+                <FileText size={20} />
+                <span className={labelClass}>My Orders</span>
+              </Link>
+            </>
+          )}
+
+          {/* DELIVERY */}
+          {isDelivery && (
+            <Link to="/delivery-admin" className={linkClass("/delivery-admin")}>
+              <Truck size={20} />
+              <span className={labelClass}>My Orders</span>
+            </Link>
+          )}
+
+          {/* ADMIN */}
+          {isAdmin && (
+            <>
+              <Link to="/admin/dashboard" className={linkClass("/admin/dashboard")}>
+                <Home size={20} />
+                <span className={labelClass}>Admin Dashboard</span>
+              </Link>
+
+              <Link to="/admin/drones" className={linkClass("/admin/drones")}>
+                <Truck size={20} />
+                <span className={labelClass}>Drone Management</span>
+              </Link>
+            </>
+          )}
+
+          {/* LOGOUT */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center w-full px-4 py-3 rounded-xl border bg-white text-gray-700 hover:bg-gray-50 transition"
+          >
+            <LogOut size={20} />
+            <span className={labelClass}>Logout</span>
+          </button>
         </nav>
       </div>
 
-      {/* Overlay for mobile */}
+      {/* Mobile Overlay */}
       {isOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
+          className="md:hidden fixed inset-0 bg-black bg-opacity-40 z-20"
           onClick={() => setIsOpen(false)}
         />
       )}

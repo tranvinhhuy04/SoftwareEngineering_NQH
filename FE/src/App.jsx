@@ -14,6 +14,7 @@ import DeliveryAdminPanel from "./pages/DeliveryAdminPanel";
 import AllOrders from "./pages/AllOrders";
 import RestaurantOrders from "./pages/restaurant/RestaurantOrders";
 import HomeAll from "./pages/HomeAll";
+import Profile from "./pages/Profile";
 import ProtectedLayout from "./component/protectedLayout";
 import { CartProvider } from "./CartContext";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -28,7 +29,8 @@ const App = () => {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/home" element={<HomeAll />} />
+          <Route path="/dashboard" element={<HomeAll />} />
+          <Route path="/profile" element={<Profile />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/orders" element={<OrderHistory />} />
           </Route>

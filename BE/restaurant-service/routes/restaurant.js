@@ -42,6 +42,9 @@ router.post(
         name: req.body.name,
         ownerId: req.user.id,
         isOpen: true,
+        avatar: req.body.avatar,
+        address: req.body.address,
+        phone_number: req.body.phone_number,
       });
 
       await restaurant.save();

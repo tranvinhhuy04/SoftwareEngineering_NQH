@@ -3,12 +3,21 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 const fileUpload = require("express-fileupload");
+const { v2: cloudinary } = require("cloudinary");
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Enable file upload (✔ Only once)
 app.use(
   fileUpload({
     useTempFiles: true,

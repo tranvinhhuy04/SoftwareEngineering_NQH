@@ -1,27 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import '../../styles/theme.css';
+// src/pages/restaurant/MenuCategories.jsx
 
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import "../../styles/theme.css";
 
-const MenuItemsList = () => {
-  const [menuItems, setMenuItems] = useState([]);
+const MenuCategories = () => {
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(null);
   const navigate = useNavigate();
 
-
+  /* ================================
+        🔥 Fetch Categories
+  ================================= */
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const token = localStorage.getItem("token");
 
-        // 1) Lấy restaurantId của người đăng nhập
+        // 1️⃣ Lấy restaurantId
         const temp = await axios.get(
           "http://localhost:8000/restaurant/api/restaurants-id",
           {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
 
@@ -30,140 +33,181 @@ const MenuItemsList = () => {
         const restaurantId = temp.data[0]?._id;
         console.log("Using restaurantId:", restaurantId);
 
-        // 2) Lấy category theo restaurantId
+        // 2️⃣ Lấy categories theo restaurantId
         const response = await axios.get(
           `http://localhost:8000/restaurant/${restaurantId}/category`,
           {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
 
         console.log("Fetched categories:", response.data);
 
-        setCategories(response.data);  // <-- gán vào state
+        setCategories(response.data);
       } catch (err) {
         console.error("Fetch categories error:", err);
+        setError("Failed to fetch categories");
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchCategories();
   }, []);
 
-  const fetchMenuItems = async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      const temp = await axios.get('http://localhost:8000/restaurant/api/restaurants-id', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      console.log('Fetched restaurants:', temp.data);
-      const restaurantId = temp.data[0]?._id;
-      console.log('Using restaurantId:', restaurantId);
-      const token = localStorage.getItem('token');
-      const api = `http://localhost:8000/restaurant/${restaurantId}/category`;
-      const response = await axios.get(api, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      console.log('Fetched menu categories:', response.data); // Debug: Log full response
-      response.data.forEach(item => {
-        if (item.imageUrl) {
-          console.log('Image URL for', item.name, ':', item.imageUrl);
-        }
-      });
-      setMenuItems(response.data);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch menu items');
-      console.error('Fetch error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  /* ================================
+        🔥 Delete Category
+  ================================= */
   const handleDelete = async (id) => {
     setDeleteLoading(id);
-    
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:8000/restaurant/category/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setMenuItems(menuItems.filter(item => item._id !== id));
+      const token = localStorage.getItem("token");
+
+      await axios.delete(
+        `http://localhost:8000/restaurant/category/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // Xóa item trong UI
+      setCategories((prev) => prev.filter((item) => item._id !== id));
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete menu item');
-      console.error('Delete error:', err);
+      console.error("Delete error:", err);
+      setError("Failed to delete category");
     } finally {
       setDeleteLoading(null);
     }
   };
 
-  return (
-    <div className="app-root">
-      <header className="header">
-        <div className="container mx-auto flex flex-col md:flex-row justify-between items-center">
-          <h1 className="brand" onClick={() => navigate('/')}>
-            <span className="brand-main">Fast</span>
-            <span className="brand-accent">food</span>
-          </h1>
-          <nav className="actions">
-            <button onClick={() => navigate('/restaurant/menu/categories/add')} className="btn-add">Add Menu Category</button>
-            <button onClick={() => navigate('/home')} className="px-4 py-2 hover:underline">Home</button>
-          </nav>
-        </div>
-      </header>
+  /* ================================
+             UI RENDER
+  ================================= */
+return (
+  <div className="min-h-screen bg-gradient-to-br from-green-100 via-yellow-50 to-white flex flex-col text-gray-900">
 
-      <main className="flex-1 container mx-auto px-4 py-8 md:py-16">
-        <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">Your Menu Categories</h2>
+    {/* HEADER */}
+    <header className="bg-white/70 backdrop-blur-md shadow-md py-4 border-b border-green-200">
+      <div className="container mx-auto flex flex-col md:flex-row justify-between items-center px-4">
         
-        {error && (
-          <div className="bg-red-500 text-white p-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-        
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="w-12 h-12 rounded-full border-4 border-green-500 border-t-transparent animate-spin mx-auto"></div>
-            <p className="mt-4 text-gray-400">Loading menu items...</p>
-          </div>
-        ) : menuItems.length === 0 ? (
-          <div className="text-center py-8 bg-gray-900 rounded-lg max-w-xl mx-auto">
-            <p className="text-xl mb-4">You haven't added any menu items yet.</p>
-            <button onClick={() => navigate('/restaurant/menu/add')} className="btn-add">Add Your First Item</button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {menuItems.map(item => (
-              <div 
-                key={item._id} 
-                className="bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition duration-200"
+        {/* Logo */}
+        <h1
+          className="font-extrabold text-3xl cursor-pointer flex items-center gap-1"
+          onClick={() => navigate("/")}
+        >
+          <span className="text-gray-900">Fast</span>
+          <span className="text-green-600">food</span>
+        </h1>
+
+        {/* Actions */}
+        <nav className="flex gap-3 mt-3 md:mt-0">
+          <button
+            onClick={() => navigate("/restaurant/menu/categories/add")}
+            className="px-5 py-2 bg-green-500 text-white font-semibold rounded-2xl shadow hover:bg-green-600 transition"
+          >
+            + Add Category
+          </button>
+
+          <button
+            onClick={() => navigate("/home")}
+            className="px-5 py-2 bg-gray-200 text-gray-700 rounded-2xl hover:bg-gray-300 transition"
+          >
+            Home
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    {/* MAIN CONTENT */}
+    <main className="flex-1 container mx-auto px-6 py-12">
+
+      <h2 className="text-4xl font-extrabold text-center mb-10 
+                     bg-gradient-to-r from-green-500 to-yellow-400 
+                     bg-clip-text text-transparent">
+        Your Menu Categories
+      </h2>
+
+      {/* ERROR */}
+      {error && (
+        <div className="bg-red-400 text-white p-4 rounded-2xl mb-6 shadow-md text-center">
+          {error}
+        </div>
+      )}
+
+      {/* LOADING */}
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="w-14 h-14 rounded-full border-4 border-green-400 border-t-transparent animate-spin mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading categories...</p>
+        </div>
+      ) : categories.length === 0 ? (
+        <div className="text-center py-10 bg-white rounded-2xl max-w-xl mx-auto shadow-lg border border-gray-200">
+          <p className="text-xl mb-4 text-gray-700">
+            You haven't added any categories yet.
+          </p>
+          <button
+            onClick={() => navigate("/restaurant/menu/categories/add")}
+            className="px-5 py-3 bg-green-500 text-white font-bold rounded-2xl hover:bg-green-600 transition"
+          >
+            Add Your First Category
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+            {categories.map((cat) => (
+              <div
+                key={cat._id}
+                className="bg-white p-6 rounded-3xl shadow-lg hover:shadow-xl 
+                           transition duration-300 border border-gray-200"
               >
-                
-                <div className="p-6">
-                  <h3 className="text-xl font-bold mb-2">{item.name}</h3>
-                  <p className="text-gray-400 mb-4">{item.description}</p>
-                  <div className="flex justify-between items-center">
-                    <button
-                      onClick={() => handleDelete(item._id)}
-                      disabled={deleteLoading === item._id}
-                      className={`px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition duration-200 ${deleteLoading === item._id ? 'opacity-70 cursor-not-allowed' : ''}`}
-                    >
-                      {deleteLoading === item._id ? 'Deleting...' : 'Delete'}
-                    </button>
-                  </div>
+                <h3 className="text-2xl font-bold text-green-600 mb-2">
+                  {cat.name}
+                </h3>
+
+                <p className="text-gray-600 mb-6">{cat.description}</p>
+
+                <div className="flex justify-between items-center">
+
+                  {/* DELETE */}
+                  <button
+                    onClick={() => handleDelete(cat._id)}
+                    disabled={deleteLoading === cat._id}
+                    className={`px-4 py-2 rounded-2xl bg-red-500 text-white font-semibold hover:bg-red-600 transition ${
+                      deleteLoading === cat._id
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
+                  >
+                    {deleteLoading === cat._id ? "Deleting..." : "Delete"}
+                  </button>
+
+                  {/* EDIT */}
+                  <button
+                    onClick={() =>
+                      navigate(`/restaurant/menu/categories/edit/${cat._id}`)
+                    }
+                    className="px-4 py-2 rounded-2xl bg-yellow-300 text-gray-900 font-semibold hover:bg-yellow-200 transition"
+                  >
+                    Edit
+                  </button>
                 </div>
               </div>
             ))}
           </div>
-        )}
-      </main>
-      <footer className="footer">
-        <p>© {new Date().getFullYear()} Fastfood. All rights reserved.</p>
-      </footer>
-    </div>
-  );
+        </>
+      )}
+    </main>
+
+    {/* FOOTER */}
+    <footer className="py-6 text-center bg-white/70 backdrop-blur-md border-t border-gray-200 text-gray-600 mt-10">
+      © {new Date().getFullYear()} Fastfood — All rights reserved.
+    </footer>
+  </div>
+);
+
 };
 
-export default MenuItemsList;
+export default MenuCategories;

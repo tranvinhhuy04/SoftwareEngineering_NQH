@@ -28,7 +28,7 @@ export default function Login() {
       if (role === "admin") {
         window.location.href = "/admin/dashboard";
       } else if (role === "customer") {
-        window.location.href = "/home";
+        window.location.href = "/dashboard";
       } else if (role === "restaurant") {
         window.location.href = "/restaurant/orders";
       } else if (role === "delivery") {

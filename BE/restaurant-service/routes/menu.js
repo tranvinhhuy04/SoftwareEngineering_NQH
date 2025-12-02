@@ -8,7 +8,7 @@ const { verifyToken, allowRoles } = require("../utils/authMiddleware");
 const { v2: cloudinary } = require("cloudinary");
 
 /* ============================================================
- * CREATE MENU ITEM
+ * CREATE MENU ITEM (FILE UPLOAD → CLOUDINARY)
  * ============================================================ */
 router.post(
   "/menu",
@@ -16,29 +16,38 @@ router.post(
   allowRoles("restaurant"),
   async (req, res) => {
     try {
+      // 1) Tìm restaurant theo owner
       const restaurant = await Restaurant.findOne({ ownerId: req.user.id });
-      if (!restaurant)
+      if (!restaurant) {
         return res.status(404).json({ message: "Restaurant not found" });
+      }
 
+      // 2) Check category thuộc restaurant này
       const category = await Category.findOne({
         _id: req.body.categoryId,
         restaurantId: restaurant._id,
       });
 
-      if (!category)
+      if (!category) {
         return res.status(400).json({
           message: "This category does not belong to your restaurant",
         });
+      }
 
+      // 3) Upload ảnh lên Cloudinary (nếu có)
       let image_url = null;
 
       if (req.files && req.files.image) {
-        const upload = await cloudinary.uploader.upload(req.files.image.tempFilePath, {
+        const file = req.files.image;
+
+        const upload = await cloudinary.uploader.upload(file.tempFilePath, {
           folder: "food-delivery/menu",
         });
+
         image_url = upload.secure_url;
       }
 
+      // 4) Tạo menu item
       const item = await MenuItem.create({
         name: req.body.name,
         description: req.body.description,
@@ -48,13 +57,15 @@ router.post(
         image_url,
       });
 
-      res.json({ message: "Menu item created", item });
-
+      return res.json({ message: "Menu item created", item });
     } catch (err) {
-      res.status(500).json({ message: "Internal server error" });
+      console.error("Create menu error:", err);
+      return res.status(500).json({ message: "Internal server error" });
     }
   }
 );
+
+module.exports = router;
 
 /* ============================================================
  * GET MENU BY RESTAURANT

@@ -134,6 +134,31 @@ const HomeAll = () => {
     navigate("/login");
   };
 
+  const RestaurantGrid = ({ restaurants, onSelect }) => (
+    <div className="mt-10">
+      <h2 className="text-3xl font-extrabold mb-6 text-gray-800">Choose a Restaurant</h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {restaurants.map((r) => (
+          <div
+            key={r._id}
+            onClick={() => onSelect(r._id)}
+            className="bg-white rounded-xl shadow hover:shadow-lg transition cursor-pointer p-4"
+          >
+            <img
+              src={r.imageUrl || "https://via.placeholder.com/300"}
+              className="rounded-xl h-40 w-full object-cover"
+              alt={r.name}
+            />
+
+            <h3 className="mt-3 text-lg font-semibold">{r.name}</h3>
+            <p className="text-gray-500 text-sm">{r.address || "No address"}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
 return (
   <div className="min-h-screen bg-gradient-to-br from-green-50 via-yellow-50 to-white">
 
@@ -151,8 +176,13 @@ return (
 
         {/* Brand */}
         <h1 onClick={() => navigate('/')} className="text-3xl font-extrabold cursor-pointer">
-          <span className="text-black">Fast</span>
-          <span className="text-red-600">food</span>
+          <h1
+              className="font-extrabold text-2xl tracking-wide cursor-pointer"
+              onClick={() => (window.location.href = "/")}
+            >
+              <span className="text-black">Fast</span>
+              <span className="text-green-600">Food</span>
+            </h1>
         </h1>
 
         {/* Actions */}
@@ -202,38 +232,69 @@ return (
 
           {/* Profile */}
           <div className="relative">
-            <button
-              onClick={() => setShowProfileMenu((p) => !p)}
-              className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-gray-300 
-                         hover:border-green-500 transition"
-            >
-              <img
-                src={user?.avatar || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"}
-                className="w-full h-full object-cover"
-              />
-            </button>
+  <button
+    onClick={() => setShowProfileMenu((p) => !p)}
+    className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-gray-300 
+               hover:border-green-500 transition"
+  >
+    <img
+      src={
+        user?.avatar ||
+        "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"
+      }
+      className="w-full h-full object-cover"
+    />
+  </button>
 
-            {showProfileMenu && (
-              <div className="absolute right-0 mt-3 w-48 bg-white p-3 rounded-xl shadow-lg ring-1 ring-gray-200">
+  {showProfileMenu && (
+    <div className="absolute right-0 mt-3 w-56 bg-white p-3 rounded-2xl shadow-xl ring-1 ring-gray-200 z-20">
 
-                <button onClick={() => navigate("/profile")} className="dropdown-item">
-                  👤 Profile
-                </button>
+      {/* Nếu chưa đăng nhập → show Sign In / Sign Up */}
+      {!user ? (
+        <>
+          <button
+            onClick={() => navigate("/login")}
+            className="dropdown-item flex items-center gap-2 text-gray-700 hover:bg-gray-100 rounded-xl px-3 py-2"
+          >
+            🔑 <span>Sign In</span>
+          </button>
 
-                <button onClick={() => navigate("/my-orders")} className="dropdown-item">
-                  📦 My Orders
-                </button>
+          <button
+            onClick={() => navigate("/register")}
+            className="dropdown-item flex items-center gap-2 text-green-600 hover:bg-green-50 rounded-xl px-3 py-2 font-semibold"
+          >
+            ✨ <span>Sign Up</span>
+          </button>
+        </>
+      ) : (
+        <>
+          {/* Đã đăng nhập → show Profile + Orders + Logout */}
+          <button
+            onClick={() => navigate("/profile")}
+            className="dropdown-item flex items-center gap-2 text-gray-700 hover:bg-gray-100 rounded-xl px-3 py-2"
+          >
+            👤 <span>Profile</span>
+          </button>
 
-                <button
-                  onClick={handleSignOut}
-                  className="dropdown-item text-red-600"
-                >
-                  🔐 Sign Out
-                </button>
+          <button
+            onClick={() => navigate("/my-orders")}
+            className="dropdown-item flex items-center gap-2 text-gray-700 hover:bg-gray-100 rounded-xl px-3 py-2"
+          >
+            📦 <span>My Orders</span>
+          </button>
 
-              </div>
-            )}
-          </div>
+          <button
+            onClick={handleSignOut}
+            className="dropdown-item flex items-center gap-2 text-red-600 hover:bg-red-50 rounded-xl px-3 py-2 font-semibold"
+          >
+            🔐 <span>Sign Out</span>
+          </button>
+        </>
+      )}
+    </div>
+  )}
+</div>
+
 
         </div>
       </div>
@@ -302,33 +363,45 @@ return (
           )}
 
           {/* Special Offers */}
-          {!searchQuery && (
+          {/* Nếu chưa chọn restaurant → hiện danh sách restaurant */}
+          {selectedRestaurant === "all" ? (
+            <RestaurantGrid
+              restaurants={restaurants}
+              onSelect={(id) => setSelectedRestaurant(id)}
+            />
+          ) : (
             <>
-              <h2 className="text-3xl font-extrabold mb-6 text-gray-800">Special Offers</h2>
+              {/* Special Offers */}
+              {!searchQuery && (
+                <>
+                  <h2 className="text-3xl font-extrabold mb-6 text-gray-800">Special Offers</h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {menuItems.slice(0, 6).map((item) => (
-                  <div className="bg-white rounded-2xl shadow hover:shadow-lg transition p-4" key={item._id}>
-                    <img src={item.imageUrl} className="rounded-xl h-40 w-full object-cover" />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {menuItems.slice(0, 6).map((item) => (
+                      <div className="bg-white rounded-2xl shadow hover:shadow-lg transition p-4" key={item._id}>
+                        <img src={item.imageUrl} className="rounded-xl h-40 w-full object-cover" />
 
-                    <h3 className="mt-3 text-lg font-semibold">{item.name}</h3>
-                    <p className="text-gray-400">{item.restaurantName}</p>
+                        <h3 className="mt-3 text-lg font-semibold">{item.name}</h3>
+                        <p className="text-gray-400">{item.restaurantName}</p>
 
-                    <div className="flex justify-between items-center mt-3">
-                      <span className="text-lg text-green-600 font-bold">${item.price.toFixed(2)}</span>
+                        <div className="flex justify-between items-center mt-3">
+                          <span className="text-lg text-green-600 font-bold">${item.price.toFixed(2)}</span>
 
-                      <button
-                        onClick={() => handleAddToCart(item)}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded-xl"
-                      >
-                        Add
-                      </button>
-                    </div>
+                          <button
+                            onClick={() => handleAddToCart(item)}
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded-xl"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </>
+              )}
             </>
           )}
+
         </>
       )}
     </main>
