@@ -294,7 +294,7 @@ const HomeAll = () => {
                       </button>
 
                       <button
-                        onClick={() => navigate("/my-orders")}
+                        onClick={() => navigate("/orders")}
                         className="flex items-center gap-2 w-full px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-xl transition"
                       >
                         📦 My Orders
