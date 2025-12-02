@@ -11,6 +11,7 @@ import CategoriesManagement from "./pages/restaurant/CategoriesManagement";
 import ShoppingCart from "./pages/customer/ShoppingCart";
 import CreateOrder from "./pages/CreateOrder";
 import OrderHistory from "./pages/OrderHistory";
+import OrderDetail from "./pages/OrderDetail";
 import DeliveryAdminPanel from "./pages/DeliveryAdminPanel";
 import AllOrders from "./pages/AllOrders";
 import RestaurantOrders from "./pages/restaurant/RestaurantOrders";
@@ -34,6 +35,7 @@ const App = () => {
           <Route path="/profile" element={<Profile />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/orders" element={<OrderHistory />} />
+            <Route path="/orders/:id" element={<OrderDetail />} />
           </Route>
           <Route element={<ProtectedLayout allowedRoles={["restaurant"]} />}>
             <Route path="/restaurant/profile" element={<RestaurantProfile />} />

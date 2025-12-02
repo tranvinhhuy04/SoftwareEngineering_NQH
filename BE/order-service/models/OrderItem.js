@@ -3,14 +3,12 @@ const mongoose = require("mongoose");
 const orderItemSchema = new mongoose.Schema(
   {
     orderId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Order",
+      type: String,    // đổi ObjectId → String
       required: true,
     },
 
     menuId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "MenuItem",
+      type: String,    // đổi ObjectId → String
       required: true,
     },
 

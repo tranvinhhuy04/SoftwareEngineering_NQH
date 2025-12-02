@@ -8,6 +8,39 @@ const { verifyToken, allowRoles } = require("../utils/authMiddleware");
 const { v2: cloudinary } = require("cloudinary");
 
 /* ============================================================
+ * BULK MENU LOOKUP – USED BY ORDER-SERVICE
+ * ============================================================ */
+router.post("/menu/bulk", async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids)) {
+      return res.status(400).json({ message: "ids must be array" });
+    }
+
+    const menuItems = await MenuItem.find({ _id: { $in: ids } })
+      .populate("categoryId", "name");
+
+    // Chuẩn hoá output cho order-service
+    const formatted = menuItems.map(m => ({
+      _id: m._id,
+      name: m.name,
+      description: m.description,
+      price: m.price,
+      image_url: m.image_url,
+      categoryId: m.categoryId?._id,
+      categoryName: m.categoryId?.name,
+      restaurantId: m.restaurantId,
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error("Bulk menu lookup error:", err);
+    res.status(500).json({ message: "Failed to fetch menu items" });
+  }
+});
+
+/* ============================================================
  * CREATE MENU ITEM (FILE UPLOAD → CLOUDINARY)
  * ============================================================ */
 router.post(
@@ -65,7 +98,6 @@ router.post(
   }
 );
 
-module.exports = router;
 
 /* ============================================================
  * GET MENU BY RESTAURANT
@@ -120,5 +152,35 @@ router.delete(
     }
   }
 );
+/* ============================================================
+ * GET SINGLE MENU ITEM
+ * ============================================================ */
+router.get("/menu/item/:id", async (req, res) => {
+  try {
+    const menu = await MenuItem.findById(req.params.id)
+      .populate("categoryId", "name");
+
+    if (!menu) {
+      return res.status(404).json({ message: "Menu item not found" });
+    }
+
+    res.json({
+      _id: menu._id,
+      name: menu.name,
+      description: menu.description,
+      price: menu.price,
+      image_url: menu.image_url,
+      categoryId: menu.categoryId?._id,
+      categoryName: menu.categoryId?.name,
+      restaurantId: menu.restaurantId,
+    });
+
+  } catch (err) {
+    console.error("Get single menu item error:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
 
 module.exports = router;

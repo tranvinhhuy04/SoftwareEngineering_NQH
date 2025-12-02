@@ -89,14 +89,16 @@ const OrderHistory = () => {
       ) : orders.length === 0 ? (
         <div className="text-center mt-20">
           <p className="text-xl text-gray-600">
-            😢 You don’t have any orders yet
+            You don’t have any orders yet
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          
           {orders.map((order) => (
             <div
               key={order._id}
+              onClick={() => navigate(`/orders/${order._id}`)}
               className="bg-white rounded-3xl shadow-lg border hover:shadow-xl transition p-6"
             >
               {/* HEADER */}
