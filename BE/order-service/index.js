@@ -24,10 +24,12 @@ app.use((req, res, next) => {
 // Routes
 const orderRoutes = require("./routes/order");
 const adminRoutes = require("./routes/admin");
+const cartRoutes = require("./routes/cart");
 
 // 🔥 Sửa lại prefix CHUẨN cho order-service
 app.use("/orders", orderRoutes);
 app.use("/admin", adminRoutes);
+app.use("/cart", cartRoutes);
 
 // DB connect
 mongoose

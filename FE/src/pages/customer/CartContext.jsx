@@ -1,49 +1,132 @@
 import { createContext, useState, useEffect } from "react";
+import axios from "axios";
 
 export const CartContext = createContext();
+
+// ==========================
+// API GATEWAY URL (ĐÚNG)
+// ==========================
+const API_BASE_URL = "http://localhost:8000/order";
+
+// ==========================
+// AUTH HEADERS
+// ==========================
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
 
+  // ==========================
+  // FETCH CART (GET /order/cart)
+  // ==========================
+  const loadCart = async () => {
+    try {
+      const headers = getAuthHeaders();
+      const res = await axios.get(`${API_BASE_URL}/cart`, { headers });
+
+      // BE trả về: { _id, userId, items: [...] }
+      setCart(res.data.items || []);
+    } catch (err) {
+      console.error("LOAD CART ERROR:", err?.response?.data || err.message);
+    }
+  };
+
   useEffect(() => {
-    const saved = localStorage.getItem("cart");
-    if (saved) setCart(JSON.parse(saved));
+    const token = localStorage.getItem("token");
+    if (token) loadCart();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }, [cart]);
+  // ==========================
+  // NORMALIZE MENU ITEM
+  // ==========================
+  const normalizeItem = (item) => ({
+    menuId: item.menuId || item._id, // QUAN TRỌNG
+    name: item.name,
+    price: Number(item.price) || 0,
 
-  const addToCart = (item) => {
-    setCart((prev) => {
-      const exist = prev.find((i) => i._id === item._id);
-      if (exist) {
-        return prev.map((i) =>
-          i._id === item._id ? { ...i, quantity: i.quantity + 1 } : i
-        );
-      }
-      return [...prev, { ...item, quantity: 1 }];
-    });
-  };
+    imageUrl:
+      item.imageUrl ||
+      item.image_url ||
+      item.image ||
+      item.img ||
+      "",
 
-  const removeFromCart = (id) => {
-    setCart((prev) => {
-      const found = prev.find((i) => i._id === id);
-      if (!found) return prev;
+    restaurantId:
+      item.restaurantId ||
+      item.restaurant?._id ||
+      "",
 
-      if (found.quantity === 1) return prev.filter((i) => i._id !== id);
+    restaurantName:
+      item.restaurantName ||
+      item.restaurant?.name ||
+      "",
+  });
 
-      return prev.map((i) =>
-        i._id === id ? { ...i, quantity: i.quantity - 1 } : i
+  // ==========================
+  // ADD ITEM (POST /order/cart/add)
+  // ==========================
+  const addToCart = async (item) => {
+    try {
+      const headers = getAuthHeaders();
+      const body = normalizeItem(item);
+
+      const res = await axios.post(
+        `${API_BASE_URL}/cart/add`,
+        body,
+        { headers }
       );
-    });
+
+      setCart(res.data.items || []);
+    } catch (err) {
+      console.error("ADD TO CART ERROR:", err?.response?.data || err.message);
+    }
   };
 
-  const clearCart = () => setCart([]);
+  // ==========================
+  // REMOVE ITEM (DELETE /order/cart/remove/:menuId)
+  // ==========================
+  const removeFromCart = async (menuId) => {
+    try {
+      const headers = getAuthHeaders();
+
+      const res = await axios.delete(
+        `${API_BASE_URL}/cart/remove/${menuId}`,
+        { headers }
+      );
+
+      setCart(res.data.items || []);
+    } catch (err) {
+      console.error("REMOVE CART ERROR:", err?.response?.data || err.message);
+    }
+  };
+
+  // ==========================
+  // CLEAR CART (DELETE /order/cart/clear)
+  // ==========================
+  const clearCart = async () => {
+    try {
+      const headers = getAuthHeaders();
+
+      await axios.delete(`${API_BASE_URL}/cart/clear`, { headers });
+
+      setCart([]);
+    } catch (err) {
+      console.error("CLEAR CART ERROR:", err?.response?.data || err.message);
+    }
+  };
 
   return (
     <CartContext.Provider
-      value={{ cart, addToCart, removeFromCart, clearCart }}
+      value={{
+        cart,
+        addToCart,
+        removeFromCart,
+        clearCart,
+        loadCart,
+      }}
     >
       {children}
     </CartContext.Provider>

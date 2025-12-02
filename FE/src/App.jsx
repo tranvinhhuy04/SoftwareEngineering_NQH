@@ -17,7 +17,7 @@ import RestaurantOrders from "./pages/restaurant/RestaurantOrders";
 import HomeAll from "./pages/HomeAll";
 import Profile from "./pages/Profile";
 import ProtectedLayout from "./component/protectedLayout";
-import { CartProvider } from "./CartContext";
+import { CartProvider } from "./pages/customer/CartContext";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminDroneList from "./pages/admin/AdminDroneList";
 import DroneTracking from "./pages/DroneTracking";
