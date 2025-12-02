@@ -1,426 +1,344 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { CartContext } from '../CartContext';
-import '../styles/theme.css';
+import React, { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { CartContext } from "../CartContext";
+import "../styles/theme.css";
 
 const HomeAll = () => {
-  const { cart, addToCart } = useContext(CartContext);
-  const [menuItems, setMenuItems] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [showSearchBar, setShowSearchBar] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
   const navigate = useNavigate();
+  const { cart, addToCart } = useContext(CartContext);
 
-  // Check if user is logged in
+  const [restaurants, setRestaurants] = useState([]);
+  const [menuItems, setMenuItems] = useState([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState("all");
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [showSearchBar, setShowSearchBar] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  // ==============================
+  // CHECK LOGIN
+  // ==============================
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-    }
+    const token = localStorage.getItem("token");
+    if (!token) navigate("/login");
   }, [navigate]);
 
-  // Fetch all menu items
+  // ==============================
+  // FETCH ALL RESTAURANTS
+  // ==============================
   useEffect(() => {
-    const fetchMenuItems = async () => {
-      setLoading(true);
-      setError('');
+    const fetchRestaurants = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:8000/restaurant/menu/all', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        console.log('Fetched menu items:', response.data);
-        setMenuItems(response.data);
+        const token = localStorage.getItem("token");
+        const res = await axios.get(
+          "http://localhost:8000/restaurant/getAllRestaurant",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setRestaurants(res.data);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to fetch menu items');
-        console.error('Fetch error:', err);
+        console.error("Restaurant fetch error:", err);
+      }
+    };
+
+    fetchRestaurants();
+  }, []);
+
+  // ==============================
+  // LOAD MENU WHEN SELECT RESTAURANT
+  // ==============================
+  useEffect(() => {
+    const loadMenu = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const token = localStorage.getItem("token");
+
+        let url = "";
+
+        if (selectedRestaurant === "all") {
+          url = "http://localhost:8000/restaurant/menu/all";
+        } else {
+          url = `http://localhost:8000/restaurant/${selectedRestaurant}/menu`;
+        }
+
+        const res = await axios.get(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        setMenuItems(res.data);
+      } catch (err) {
+        setError("Failed to load menu items");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMenuItems();
-  }, []);
+    loadMenu();
+  }, [selectedRestaurant]);
 
-  // Update search results when searchQuery changes
+  // ==============================
+  // SEARCH LOGIC
+  // ==============================
   useEffect(() => {
-    if (searchQuery.trim() === '') {
+    if (!searchQuery.trim()) {
       setSearchResults([]);
       return;
     }
-    
-    const filteredItems = menuItems.filter(item =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.restaurantName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+
+    const filtered = menuItems.filter(
+      (item) =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.restaurantName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    
-    setSearchResults(filteredItems);
+
+    setSearchResults(filtered);
   }, [searchQuery, menuItems]);
 
-  // Handle adding item to cart
+  // ==============================
+  // ADD TO CART
+  // ==============================
   const handleAddToCart = (item) => {
-    addToCart({
-      ...item,
-      quantity: 1
-    });
-    
-    // Show feedback
-    const notification = document.getElementById('notification');
-    if (notification) {
-      notification.classList.remove('hidden');
-      notification.classList.add('flex');
-      setTimeout(() => {
-        notification.classList.add('hidden');
-        notification.classList.remove('flex');
-      }, 2000);
-    }
+    addToCart({ ...item, quantity: 1 });
+
+    const noti = document.getElementById("notification");
+    noti.classList.remove("hidden");
+    noti.classList.add("flex");
+
+    setTimeout(() => {
+      noti.classList.add("hidden");
+    }, 1500);
   };
 
-  // Calculate total items in cart for badge
-  const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
+  const cartItemCount = cart.reduce((t, i) => t + i.quantity, 0);
 
-  // Handle sign out
-  const handleSignOut = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
-  };
-
-  // Toggle search bar
   const toggleSearchBar = () => {
     setShowSearchBar(!showSearchBar);
     if (showSearchBar) {
-      setSearchQuery('');
+      setSearchQuery("");
       setSearchResults([]);
     }
   };
 
-  // Filter menu items for display
-  const getDisplayItems = () => {
-    return searchQuery.trim() !== '' ? searchResults : menuItems;
+  const handleSignOut = () => {
+    localStorage.removeItem("token");
+    navigate("/login");
   };
 
-  // Filter for popular items (we'll consider items with lower prices as popular for demonstration)
-  // const getPopularItems = () => {
-  //   return [...menuItems]
-  //     .sort((a, b) => a.price - b.price)
-  //     .slice(0, 3);
-  // };
+return (
+  <div className="min-h-screen bg-gradient-to-br from-green-50 via-yellow-50 to-white">
 
-  return (
-    <div className="app-root">
-      {/* Notification */}
-      <div 
-        id="notification" 
-        className="hidden fixed top-5 right-5 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg items-center"
-        style={{ zIndex: 9999 }}
-      >
-        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-        </svg>
-        Item added to cart!
-      </div>
+    {/* Notification */}
+    <div 
+      id="notification"
+      className="hidden fixed top-5 right-5 bg-green-600 text-white px-4 py-2 rounded-xl shadow-lg items-center z-50"
+    >
+      ✔ Added to cart!
+    </div>
 
-      {/* Header - Similar to Uber Eats */}
-      <header className="header">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center">
-            <h1 className="brand" onClick={() => navigate('/')}>
-              <span className="brand-main">Fast</span>
-              <span className="brand-accent">food</span>
-            </h1>
-          </div>
+    {/* ================= HEADER ================= */}
+    <header className="bg-white shadow-sm sticky top-0 z-40">
+      <div className="container mx-auto flex justify-between items-center py-4 px-4">
 
-          <div className="actions">
-            {/* <button
-              className="flex items-center text-black px-3 py-2"
-              onClick={() => navigate('/delivery-timing')}
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Deliver now
-            </button> */}
-            
-            <div className="relative">
-              <button onClick={toggleSearchBar} className="flex items-center px-3 py-2">
-                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                Search
-              </button>
-            </div>
-            
-            <div className="relative">
-              <button onClick={() => navigate('/create-order')} className="flex items-center px-3 py-2">
-                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                Cart
-                {cartItemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {cartItemCount}
-                  </span>
-                )}
-              </button>
-            </div>
-            
-            <button
-              onClick={handleSignOut}
-              className="bg-white text-black font-medium border border-gray-300 rounded-full px-4 py-2 hover:bg-gray-100"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
+        {/* Brand */}
+        <h1 onClick={() => navigate('/')} className="text-3xl font-extrabold cursor-pointer">
+          <span className="text-black">Fast</span>
+          <span className="text-red-600">food</span>
+        </h1>
 
-        {/* Search Bar Dropdown */}
-        {showSearchBar && (
-          <div className="container mx-auto mt-4">
-            <div className="search-bar">
-              <svg className="w-5 h-5 text-gray-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search for restaurants, cuisines, dishes..."
-                className="flex-1 bg-transparent focus:outline-none"
-                autoFocus
+        {/* Actions */}
+        <div className="flex items-center space-x-6">
+
+          {/* Search */}
+          <button onClick={toggleSearchBar} className="flex items-center text-gray-700 hover:text-green-600">
+            <svg className="w-6 h-6 mr-1 text-green-600" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
-              {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery('')}
-                  className="text-gray-500"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+            </svg>
+            Search
+          </button>
+
+          {/* Restaurant Filter */}
+          <select
+            value={selectedRestaurant}
+            onChange={(e) => setSelectedRestaurant(e.target.value)}
+            className="border border-gray-300 rounded-full px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 shadow-sm"
+          >
+            <option value="all">All Restaurants</option>
+            {restaurants.map((r) => (
+              <option key={r._id} value={r._id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Cart */}
+          <div className="relative">
+            <button onClick={() => navigate("/create-order")} className="flex items-center hover:text-green-600">
+              <svg className="w-6 h-6 mr-1 text-green-600" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-2.293 
+                    2.293c-.63.63-.184 1.707.707 1.707H17" />
+              </svg>
+              Cart
+              {cartItemCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-green-600 text-white 
+                  text-xs rounded-full h-5 w-5 flex items-center justify-center shadow">
+                  {cartItemCount}
+                </span>
               )}
-            </div>
-          </div>
-        )}
-      </header>
-
-      <main className="flex-1 container mx-auto px-4 py-8">
-        {error && (
-          <div className="bg-red-500 text-white p-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="w-12 h-12 rounded-full border-4 border-green-500 border-t-transparent animate-spin mx-auto"></div>
-            <p className="mt-4 text-gray-400">Loading menu items...</p>
-          </div>
-        ) : searchQuery && searchResults.length === 0 ? (
-          <div className="text-center py-8 bg-gray-100 rounded-lg max-w-xl mx-auto">
-            <p className="text-xl mb-4">No menu items found for "{searchQuery}"</p>
-            <button 
-              onClick={() => setSearchQuery('')}
-              className="text-green-500 underline"
-            >
-              Clear search
             </button>
           </div>
-        ) : (
-          <>
-            {/* Search Results */}
-            {searchQuery && (
-              <div className="mb-16">
-                <h2 className="text-2xl font-bold mb-4">Search Results for "{searchQuery}"</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {searchResults.map(item => (
-                    <div
-                      key={`search-${item._id}`}
-                      className="card"
-                    >
-                      <div className="relative">
-                        {item.imageUrl ? (
-                          <img
-                            src={item.imageUrl}
-                            alt={item.name}
-                            className="card-img"
-                            onError={(e) => {
-                              e.target.src = 'https://via.placeholder.com/150?text=No+Image';
-                            }}
-                          />
-                        ) : (
-                          <div className="card-img bg-gray-800 flex items-center justify-center">
-                            <span className="text-gray-500">No Image</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="card-body">
-                        <h3 className="text-lg font-semibold">{item.name}</h3>
-                        <p className="text-gray-400 text-sm mb-3">{item.restaurantName}</p>
-                        <div className="flex items-center justify-between">
-                          <span className="price">${item.price.toFixed(2)}</span>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
-                            className="btn-add"
-                          >
-                            Add
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+
+          {/* Profile */}
+          <div className="relative">
+            <button
+              onClick={() => setShowProfileMenu((p) => !p)}
+              className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-gray-300 
+                         hover:border-green-500 transition"
+            >
+              <img
+                src={user?.avatar || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"}
+                className="w-full h-full object-cover"
+              />
+            </button>
+
+            {showProfileMenu && (
+              <div className="absolute right-0 mt-3 w-48 bg-white p-3 rounded-xl shadow-lg ring-1 ring-gray-200">
+
+                <button onClick={() => navigate("/profile")} className="dropdown-item">
+                  👤 Profile
+                </button>
+
+                <button onClick={() => navigate("/my-orders")} className="dropdown-item">
+                  📦 My Orders
+                </button>
+
+                <button
+                  onClick={handleSignOut}
+                  className="dropdown-item text-red-600"
+                >
+                  🔐 Sign Out
+                </button>
+
               </div>
             )}
+          </div>
 
-            {/* Only show these sections if not searching */}
-            {!searchQuery && (
-              <>
-                {/* Special Offers Section */}
-                <div className="mb-16">
-                  <div className="flex justify-between items-center mb-4">
-                    <div>
-                      <h2 className="text-2xl font-bold">Special Offers</h2>
-                      {/* <p className="text-gray-600 text-sm">Provided by local restaurants</p> */}
-                    </div>
-                    {/* <div className="flex space-x-2">
-                      <button className="bg-gray-100 rounded-full p-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-                      <button className="bg-gray-100 rounded-full p-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </div> */}
-                  </div>
+        </div>
+      </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {getDisplayItems().slice(0, 6).map((item) => (
-                          <div key={`special-${item._id}`} className="card">
-                            <div className="relative">
-                              {item.imageUrl ? (
-                                <img src={item.imageUrl} alt={item.name} className="card-img" onError={(e) => { e.target.src = ''; }} />
-                              ) : (
-                                <div className="card-img bg-gray-800 flex items-center justify-center"><span className="text-gray-500">No Image</span></div>
-                              )}
-                            </div>
-                            <div className="card-body">
-                              <h3 className="text-lg font-semibold">{item.name}</h3>
-                              <p className="text-gray-400 text-sm mb-3">{item.restaurantName}</p>
-                              <div className="flex items-center justify-between">
-                                <span className="price">${item.price.toFixed(2)}</span>
-                                <button onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }} className="btn-add">Add</button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                  </div>
-                </div>
+      {/* Search Bar */}
+      {showSearchBar && (
+        <div className="container mx-auto mt-3 px-4 pb-4">
+          <div className="flex items-center bg-gray-100 rounded-full px-4 py-3 shadow-inner">
+            <svg className="w-6 h-6 text-gray-400 mr-3" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                d="M21 21l-6-6"/>
+            </svg>
 
-                {/* Popular Near You Section */}
-                <div className="mb-16">
-                  {/* <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-bold">Popular Near You</h2>
-                    <div className="flex items-center">
-                      <a href="#" className="text-green-500 mr-4">View all</a>
-                      <div className="flex space-x-2">
-                        <button className="bg-gray-100 rounded-full p-2">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                          </svg>
-                        </button>
-                        <button className="bg-gray-100 rounded-full p-2">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </div> */}
+            <input
+              autoFocus
+              type="text"
+              className="flex-1 bg-transparent outline-none text-gray-700"
+              placeholder="Search food..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
 
-                  {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {getPopularItems().map((item, index) => (
-                      <div
-                        key={`popular-${item._id}`}
-                        className="rounded-lg overflow-hidden shadow hover:shadow-md transition duration-200 cursor-pointer"
-                        onClick={() => navigate(`/menu-item/${item._id}`)}
-                      >
-                        <div className="relative">
-                          {item.imageUrl ? (
-                            <img
-                              src={item.imageUrl}
-                              alt={item.name}
-                              className="w-full h-48 object-cover"
-                              onError={(e) => {
-                                e.target.src = 'https://via.placeholder.com/150?text=No+Image';
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
-                              <span className="text-gray-400">No Image</span>
-                            </div>
-                          )}
-                          <button 
-                            className="absolute top-3 right-3 bg-white rounded-full p-1 shadow"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Favorite functionality would go here
-                            }}
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                            </svg>
-                          </button>
-                        </div>
-                        <div className="p-4">
-                          <h3 className="text-lg font-semibold">{item.name}</h3>
-                          <p className="text-gray-600 text-sm mb-1">
-                            $$ • {item.restaurantName} • {item.category || 'Various'}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center text-sm">
-                              <span className="flex items-center mr-2">
-                                <svg className="w-4 h-4 text-yellow-500 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                                {4.6 + (index % 3) / 10}
-                              </span>
-                              <span className="mr-2">{15 + (index % 4) * 5}–{30 + (index % 4) * 5} min</span>
-                              <span>${item.price.toFixed(2)} fee</span>
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAddToCart(item);
-                              }}
-                              className="bg-green-500 text-white text-sm px-3 py-1 rounded hover:bg-green-600 transition"
-                            >
-                              Add
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div> */}
-                </div>
-              </>
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="text-gray-400 hover:text-red-500">
+                ✕
+              </button>
             )}
-          </>
-        )}
-      </main>
+          </div>
+        </div>
+      )}
+    </header>
 
-      <footer className="footer">
-        <p>© {new Date().getFullYear()} Fastfood. All rights reserved.</p>
-      </footer>
-    </div>
-  );
+    {/* ================= MAIN ================= */}
+    <main className="container mx-auto px-4 py-10">
+
+      {loading ? (
+        <div className="text-center py-16">
+          <div className="w-14 h-14 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        </div>
+      ) : (
+        <>
+          {/* Search results */}
+          {searchQuery && (
+            <>
+              <h2 className="text-3xl font-extrabold mb-6 text-gray-800">Search Results</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {searchResults.map((item) => (
+                  <div className="bg-white rounded-2xl shadow hover:shadow-lg transition p-4" key={item._id}>
+                    <img src={item.imageUrl} className="rounded-xl h-40 w-full object-cover" />
+                    <h3 className="mt-3 text-lg font-semibold">{item.name}</h3>
+                    <p className="text-gray-400">{item.restaurantName}</p>
+                    <div className="flex justify-between items-center mt-3">
+                      <span className="text-lg text-green-600 font-bold">${item.price.toFixed(2)}</span>
+                      <button
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded-xl"
+                        onClick={() => handleAddToCart(item)}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Special Offers */}
+          {!searchQuery && (
+            <>
+              <h2 className="text-3xl font-extrabold mb-6 text-gray-800">Special Offers</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {menuItems.slice(0, 6).map((item) => (
+                  <div className="bg-white rounded-2xl shadow hover:shadow-lg transition p-4" key={item._id}>
+                    <img src={item.imageUrl} className="rounded-xl h-40 w-full object-cover" />
+
+                    <h3 className="mt-3 text-lg font-semibold">{item.name}</h3>
+                    <p className="text-gray-400">{item.restaurantName}</p>
+
+                    <div className="flex justify-between items-center mt-3">
+                      <span className="text-lg text-green-600 font-bold">${item.price.toFixed(2)}</span>
+
+                      <button
+                        onClick={() => handleAddToCart(item)}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded-xl"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </main>
+
+    {/* FOOTER */}
+    <footer className="py-6 text-center text-gray-600">
+      © {new Date().getFullYear()} Fastfood. All rights reserved.
+    </footer>
+  </div>
+);
 };
 
 export default HomeAll;

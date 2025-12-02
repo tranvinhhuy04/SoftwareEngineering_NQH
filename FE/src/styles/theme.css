@@ -82,3 +82,59 @@
 @media (min-width: 768px) {
   .card .card-img { height: 8rem; }
 }
+.dropdown-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 15px;
+  display: block;
+  transition: 0.2s;
+}
+
+.dropdown-item:hover {
+  background: #f0fdf4;
+  color: #22c55e;
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+
+.card-img {
+  height: 180px;
+  width: 100%;
+  object-fit: cover;
+}
+
+.card-body {
+  padding: 15px;
+}
+
+.price {
+  font-weight: bold;
+  color: #22c55e;
+  font-size: 18px;
+}
+
+.btn-add {
+  background: #22c55e;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.btn-add:hover {
+  background: #16a34a;
+}
