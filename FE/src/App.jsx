@@ -8,6 +8,7 @@ import MenuManagement from "./pages/restaurant/MenuManagement";
 import MenuItemsList from "./pages/restaurant/MenuItemsList";
 import MenuCategories from "./pages/restaurant/MenuCategories";
 import CategoriesManagement from "./pages/restaurant/CategoriesManagement";
+import ShoppingCart from "./pages/customer/ShoppingCart";
 import CreateOrder from "./pages/CreateOrder";
 import OrderHistory from "./pages/OrderHistory";
 import DeliveryAdminPanel from "./pages/DeliveryAdminPanel";
@@ -44,6 +45,8 @@ const App = () => {
           </Route>
           <Route element={<ProtectedLayout allowedRoles={["customer"]} />}>
             <Route path="/create-order" element={<CreateOrder />} />
+            <Route path="/shopping_cart" element={<ShoppingCart />} />
+
             <Route
               path="/orders/:orderId/drone-tracking"
               element={<DroneTracking />}

@@ -128,6 +128,11 @@ const Sidebar = ({ user }) => {
                 <FileText size={20} />
                 <span className={labelClass}>My Orders</span>
               </Link>
+
+              <Link to="/shopping_cart" className={linkClass("/shopping_cart")}>
+                <FileText size={20} />
+                <span className={labelClass}>My Cart</span>
+              </Link>
             </>
           )}
 
