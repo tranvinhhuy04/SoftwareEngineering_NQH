@@ -1,135 +1,252 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import '../../styles/theme.css';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import "../../styles/theme.css";
 
-const MenuManagement = () => {
-  const [categories, setcategories] = useState({
-    name: '',
-    description: ''
+const AddCategory = () => {
+  const [category, setCategory] = useState({
+    name: "",
+    description: "",
+    restaurantId: "",
   });
+
+  const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
   const navigate = useNavigate();
 
+  // ==========================================================
+  // LOAD RESTAURANTS CỦA OWNER (API trả về 1 object → ép thành array)
+  // ==========================================================
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      try {
+        const token = localStorage.getItem("token");
+
+        const res = await axios.get(
+          "http://localhost:8000/restaurant/api/restaurants-id",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // ⭐ nếu API trả 1 object → ép thành array
+        const arr = Array.isArray(res.data) ? res.data : [res.data];
+
+        setRestaurants(arr);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load restaurants.");
+      }
+    };
+
+    fetchRestaurants();
+  }, []);
+
+
+  // ==========================================================
+  // HANDLE INPUT
+  // ==========================================================
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setcategories({
-      ...categories,
-      [name]: value
-    });
+
+    // Log giá trị user chọn
+    if (name === "restaurantId") {
+      console.log("👉 Selected Restaurant ID:", value);
+    }
+
+    setCategory((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
+
+  // ==========================================================
+  // SUBMIT
+  // ==========================================================
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!category.restaurantId) {
+      setError("Please select your restaurant.");
+      return;
+    }
+
     setLoading(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
-      const token = localStorage.getItem('token');
-      console.log('Submitting category:', categories);
-      const response = await axios.post('http://localhost:8000/restaurant/category', categories, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          // 'Content-Type': 'application/json'
+      const token = localStorage.getItem("token");
+
+      await axios.post(
+        "http://localhost:8000/restaurant/category",
+        {
+          name: category.name,
+          description: category.description,
+          restaurantId: category.restaurantId,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
         }
+      );
+
+      setSuccess("Category added successfully!");
+      setCategory({
+        name: "",
+        description: "",
+        restaurantId: "",
       });
 
-      console.log('Menu Category added:', response.data); // Debug: Log response
-      setSuccess('Menu Category added successfully!');
-      setcategories({ name: '', description: ''});
-      setTimeout(() => {
-        setSuccess('');
-      }, 3000);
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add category');
-      console.error('Add category error:', err);
+      setError(
+        err.response?.data?.message || "Failed to add category. Try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  // ==========================================================
+  // UI
+  // ==========================================================
   return (
-    <div className="app-root">
-      <header className="header">
-        <div className="container mx-auto flex flex-col md:flex-row justify-between items-center">
-          <h1 className="brand" onClick={() => navigate('/')}>
-            <span className="brand-main">Fast</span>
-            <span className="brand-accent">food</span>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-yellow-50">
+
+      {/* HEADER */}
+      <header className="w-full bg-white shadow-sm border-b border-gray-200 py-4">
+        <div className="container mx-auto flex flex-col md:flex-row justify-between items-center px-4">
+          <h1
+            className="text-3xl font-extrabold cursor-pointer flex items-center gap-1"
+            onClick={() => navigate("/")}
+          >
+            <span className="text-gray-900">Fast</span>
+            <span className="text-green-600">Food</span>
           </h1>
-          <nav className="actions">
-            <button onClick={() => navigate('/restaurant/menu/categories')} className="px-4 py-2 hover:underline">View Menu Categories</button>
-            <button onClick={() => navigate('/')} className="px-4 py-2 hover:underline">Home</button>
+
+          <nav className="flex gap-3 mt-4 md:mt-0">
+            <button
+              onClick={() => navigate("/restaurant/menu/categories")}
+              className="px-5 py-2 rounded-full bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition"
+            >
+              View Categories
+            </button>
+
+            <button
+              onClick={() => navigate("/home")}
+              className="px-5 py-2 rounded-full bg-green-500 text-white font-semibold hover:bg-green-600 transition"
+            >
+              Home
+            </button>
           </nav>
         </div>
       </header>
 
-      <main className="flex-1 container mx-auto px-4 py-8 md:py-16">
-        <div className="max-w-md mx-auto bg-gray-900 rounded-lg shadow-lg p-6 md:p-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">Add Menu Category</h2>
+      {/* MAIN */}
+      <main className="container mx-auto px-4 py-10">
+        <div className="max-w-lg mx-auto bg-white rounded-3xl shadow-lg p-8 border border-gray-200">
+
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">
+            Add Category
+          </h2>
 
           {error && (
-            <div className="bg-red-500 text-white p-3 rounded mb-4">
+            <div className="bg-red-500 text-white p-3 rounded-xl mb-4">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="bg-green-500 text-white p-3 rounded mb-4">
+            <div className="bg-green-500 text-white p-3 rounded-xl mb-4">
               {success}
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label htmlFor="name" className="block text-sm font-medium mb-2">
+          <form onSubmit={handleSubmit} className="space-y-6">
+
+            {/* RESTAURANT SELECT */}
+            <div className="flex flex-col space-y-2">
+              <label className="text-lg font-semibold text-gray-900">
+                Restaurant
+              </label>
+
+              <select
+                name="restaurantId"
+                value={category.restaurantId}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-lg bg-white border"
+                required
+              >
+                <option value="">-- Select restaurant --</option>
+
+                {restaurants.map((r) => (
+                  <option key={r._id} value={r._id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+
+            </div>
+
+            {/* NAME */}
+            <div className="flex flex-col space-y-2">
+              <label className="text-lg font-semibold text-gray-900">
                 Category Name
               </label>
+
               <input
                 type="text"
-                id="name"
                 name="name"
-                value={categories.name}
+                value={category.name}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="e.g., Pizza, Drinks..."
+                className="w-full px-4 py-3 rounded-lg bg-white border border-gray-300 
+                           text-gray-900 placeholder-green-600 focus:ring-green-400"
                 required
-                placeholder="e.g. Margherita Pizza"
               />
             </div>
 
-            <div className="mb-4">
-              <label htmlFor="description" className="block text-sm font-medium mb-2">
+            {/* DESCRIPTION */}
+            <div className="flex flex-col space-y-2">
+              <label className="text-lg font-semibold text-gray-900">
                 Description
               </label>
+
               <textarea
-                id="description"
                 name="description"
-                value={categories.description}
+                value={category.description}
                 onChange={handleChange}
                 rows="3"
-                className="w-full px-4 py-3 rounded bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Short description..."
+                className="w-full px-4 py-3 rounded-lg bg-white border border-gray-300 
+                           text-gray-900 placeholder-green-600 focus:ring-green-400"
                 required
-                placeholder="Describe your dish"
-              ></textarea>
+              />
             </div>
 
+            {/* SUBMIT */}
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-3 px-4 rounded font-medium btn-add ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className="w-full py-3 bg-green-500 text-white rounded-full font-semibold 
+                         hover:bg-green-600 transition disabled:opacity-50"
             >
-              {loading ? 'Adding...' : 'Add Category'}
+              {loading ? "Adding..." : "Add Category"}
             </button>
           </form>
+
         </div>
       </main>
-      <footer className="footer">
-        <p>© {new Date().getFullYear()} Fastfood. All rights reserved.</p>
+
+      {/* FOOTER */}
+      <footer className="text-center py-6 text-gray-600 mt-10">
+        © {new Date().getFullYear()} Fastfood. All rights reserved.
       </footer>
+
     </div>
   );
 };
 
-export default MenuManagement;
+export default AddCategory;
