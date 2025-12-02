@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { CartContext } from "./customer/CartContext";
+import { CartContext } from "./customer/CartContext"; 
 import "../styles/theme.css";
 
 const HomeAll = () => {
@@ -91,18 +91,41 @@ const HomeAll = () => {
     setSearchResults(filtered);
   }, [searchQuery, menuItems]);
 
-// ========================= ADD TO CART (BACKEND) =========================
-const handleAddToCart = (item) => {
-  // Chỉ việc đưa raw item từ menu cho CartContext,
-  // normalize & gọi API là việc của CartContext
-  addToCart(item);
+  // =====================================================
+  // 🔥 FIXED: ADD ITEM WITH CORRECT RESTAURANT ID + NAME
+  // =====================================================
+  const handleAddToCart = (item) => {
+    let restaurant = null;
 
-  const noti = document.getElementById("notification");
-  if (!noti) return;
-  noti.classList.remove("hidden");
-  noti.classList.add("flex");
-  setTimeout(() => noti.classList.add("hidden"), 1500);
-};
+    // Khi đang trong 1 nhà hàng
+    if (selectedRestaurant !== "all") {
+      restaurant = restaurants.find((r) => r._id === selectedRestaurant);
+    }
+
+    // Khi ở all menu → tìm nhà hàng theo item.restaurantId (BE trả)
+    if (!restaurant && item.restaurantId) {
+      restaurant = restaurants.find((r) => r._id === item.restaurantId);
+    }
+
+    // Khi search menu
+    if (!restaurant && item.restaurantName) {
+      restaurant = restaurants.find((r) => r.name === item.restaurantName);
+    }
+
+    const fixedItem = {
+      ...item,
+      restaurantId: item.restaurantId || restaurant?._id || "",
+      restaurantName: item.restaurantName || restaurant?.name || "",
+    };
+
+    addToCart(fixedItem);
+
+    const noti = document.getElementById("notification");
+    if (!noti) return;
+    noti.classList.remove("hidden");
+    noti.classList.add("flex");
+    setTimeout(() => noti.classList.add("hidden"), 1500);
+  };
 
   // ========================= UI BELOW =========================
   const toggleSearchBar = () => {
@@ -147,8 +170,10 @@ const handleAddToCart = (item) => {
     </div>
   );
 
+  // ========================= RENDER UI =========================
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-yellow-50 to-white">
+      
       {/* Notification */}
       <div
         id="notification"
@@ -157,7 +182,7 @@ const handleAddToCart = (item) => {
         ✔ Added to cart!
       </div>
 
-      {/* ================= HEADER ================= */}
+      {/* HEADER */}
       <header className="bg-white shadow-sm sticky top-0 z-40">
         <div className="container mx-auto flex justify-between items-center py-4 px-4">
           <div
@@ -173,6 +198,7 @@ const handleAddToCart = (item) => {
           </div>
 
           <div className="flex items-center space-x-4">
+
             {/* Search */}
             <button
               onClick={toggleSearchBar}
@@ -214,8 +240,7 @@ const handleAddToCart = (item) => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
-                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-2.293 
-                      2.293c-.63.63-.184 1.707.707 1.707H17"
+                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17"
                   />
                 </svg>
                 Cart

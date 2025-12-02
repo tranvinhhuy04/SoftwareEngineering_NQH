@@ -4,7 +4,7 @@ import axios from "axios";
 export const CartContext = createContext();
 
 // ==========================
-// API GATEWAY URL (ĐÚNG)
+// API GATEWAY URL
 // ==========================
 const API_BASE_URL = "http://localhost:8000/order";
 
@@ -20,14 +20,12 @@ export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
 
   // ==========================
-  // FETCH CART (GET /order/cart)
+  // FETCH CART
   // ==========================
   const loadCart = async () => {
     try {
       const headers = getAuthHeaders();
       const res = await axios.get(`${API_BASE_URL}/cart`, { headers });
-
-      // BE trả về: { _id, userId, items: [...] }
       setCart(res.data.items || []);
     } catch (err) {
       console.error("LOAD CART ERROR:", err?.response?.data || err.message);
@@ -40,33 +38,38 @@ export const CartProvider = ({ children }) => {
   }, []);
 
   // ==========================
-  // NORMALIZE MENU ITEM
+  // NORMALIZE ITEM
   // ==========================
-  const normalizeItem = (item) => ({
-    menuId: item.menuId || item._id, // QUAN TRỌNG
-    name: item.name,
-    price: Number(item.price) || 0,
+  const normalizeItem = (item) => {
+    return {
+      menuId: item.menuId || item._id,
 
-    imageUrl:
-      item.imageUrl ||
-      item.image_url ||
-      item.image ||
-      item.img ||
-      "",
+      name: item.name,
+      price: Number(item.price) || 0,
 
-    restaurantId:
-      item.restaurantId ||
-      item.restaurant?._id ||
-      "",
+      imageUrl:
+        item.imageUrl ||
+        item.image_url ||
+        item.image ||
+        item.img ||
+        "",
 
-    restaurantName:
-      item.restaurantName ||
-      item.restaurant?.name ||
-      "",
-  });
+      restaurantId:
+        item.restaurantId ||
+        item.restaurant?._id ||
+        item.restaurant_id ||
+        "",
+
+      restaurantName:
+        item.restaurantName ||
+        item.restaurant?.name ||
+        item.restaurant_name ||
+        "",
+    };
+  };
 
   // ==========================
-  // ADD ITEM (POST /order/cart/add)
+  // ADD ITEM
   // ==========================
   const addToCart = async (item) => {
     try {
@@ -86,7 +89,7 @@ export const CartProvider = ({ children }) => {
   };
 
   // ==========================
-  // REMOVE ITEM (DELETE /order/cart/remove/:menuId)
+  // REMOVE ITEM
   // ==========================
   const removeFromCart = async (menuId) => {
     try {
@@ -104,14 +107,12 @@ export const CartProvider = ({ children }) => {
   };
 
   // ==========================
-  // CLEAR CART (DELETE /order/cart/clear)
+  // CLEAR CART
   // ==========================
   const clearCart = async () => {
     try {
       const headers = getAuthHeaders();
-
       await axios.delete(`${API_BASE_URL}/cart/clear`, { headers });
-
       setCart([]);
     } catch (err) {
       console.error("CLEAR CART ERROR:", err?.response?.data || err.message);
