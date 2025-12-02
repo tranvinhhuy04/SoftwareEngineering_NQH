@@ -109,11 +109,6 @@ const Sidebar = ({ user }) => {
                 <span className={labelClass}>Menu Categories</span>
               </Link>
 
-              <Link to="/restaurant/menu/add" className={linkClass("/restaurant/menu/add")}>
-                <ShoppingBag size={20} />
-                <span className={labelClass}>Add Menu Item</span>
-              </Link>
-
               <Link to="/restaurant/orders" className={linkClass("/restaurant/orders")}>
                 <FileText size={20} />
                 <span className={labelClass}>Incoming Orders</span>
