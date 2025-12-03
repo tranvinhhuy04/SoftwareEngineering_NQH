@@ -101,6 +101,30 @@ app.use(
     }
   })
 );
+
+app.use(
+  "/drone/admin",
+  createProxyMiddleware({
+    target: "http://drone-service:5009",
+    changeOrigin: true,
+    pathRewrite: { "^/drone/admin": "/admin/drones" },
+    logLevel: "debug",
+
+    onProxyReq: (proxyReq, req) => {
+      if (req.headers["authorization"]) {
+        proxyReq.setHeader("Authorization", req.headers["authorization"]);
+      }
+
+      if (req.body && Object.keys(req.body).length) {
+        const bodyData = JSON.stringify(req.body);
+        proxyReq.setHeader("Content-Type", "application/json");
+        proxyReq.setHeader("Content-Length", Buffer.byteLength(bodyData));
+        proxyReq.write(bodyData);
+      }
+    }
+  })
+);
 }
+
 
 module.exports = { mountRoutes };

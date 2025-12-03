@@ -3,6 +3,7 @@ FROM node:18 AS builder
 WORKDIR /app
 COPY . .
 RUN npm install
+RUN npm install -g vite
 RUN npm run build
 
 # Stage 2 - Serve

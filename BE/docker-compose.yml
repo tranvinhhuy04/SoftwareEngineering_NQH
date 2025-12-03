@@ -93,6 +93,29 @@ services:
       - app-net # ✅ thêm dòng này
     restart: always
 
+    # 🚁 Drone Service
+  drone-service:
+    build: ./drone-service
+    container_name: drone-service
+    ports:
+      - "5090:5009"
+    environment:
+      - PORT=5009
+      - ORDER_SERVICE_URL=http://order-service:5003
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/drone-service?retryWrites=true&w=majority&appName=tyty
+      - JWT_SECRET=supersecret123
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+      order-service:
+        condition: service_started
+    networks:
+      - app-net
+    restart: always
+
   # 🧩 API Gateway
   api-gateway:
     build: ./api-gateway
@@ -112,14 +135,18 @@ services:
 
   # 🐇 RabbitMQ
   rabbitmq:
-    image: rabbitmq:3.13-management
-    container_name: rabbitMQ
+    image: rabbitmq:3-management
+    container_name: rabbitmq
     ports:
       - "5672:5672"
-      - "15672:15672" # http://localhost:15672 (guest/guest)
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - app-net
-    restart: always
 
   # 🗄️ MongoDB
   mongo:
