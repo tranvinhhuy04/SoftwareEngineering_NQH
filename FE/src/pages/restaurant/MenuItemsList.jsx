@@ -74,8 +74,7 @@ const MenuItemsList = () => {
 
       setMenuItems(menuItems.filter((item) => item._id !== id));
     } catch (err) {
-      setError("Failed to delete menu item");
-      console.error("Delete error:", err);
+      setError("Failed to delete menu item");setError(err.response?.data?.message || err.message || "Unknown error");
     } finally {
       setDeleteLoading(null);
     }

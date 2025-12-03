@@ -13,8 +13,8 @@ const MenuManagement = () => {
     restaurant: "",
   });
 
-  const [imageFile, setImageFile] = useState(null);   // file ảnh
-  const [preview, setPreview] = useState(null);       // ảnh preview
+  const [imageFile, setImageFile] = useState(null);
+  const [preview, setPreview] = useState(null);
 
   const [restaurants, setRestaurants] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -27,7 +27,7 @@ const MenuManagement = () => {
 
   const navigate = useNavigate();
 
-  // ================= LOAD RESTAURANTS CỦA OWNER =================
+  /* ================= LOAD RESTAURANTS CỦA OWNER ================= */
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
@@ -41,14 +41,15 @@ const MenuManagement = () => {
         setRestaurants(res.data);
       } catch (err) {
         console.error(err);
-        setError("Failed to load restaurants");
+        setError(err.response?.data?.message || err.message || "Unknown error");
+
       }
     };
 
     fetchRestaurants();
   }, []);
 
-  // ================= LOAD CATEGORY THEO RESTAURANT =================
+  /* ================= LOAD CATEGORY THEO RESTAURANT ================= */
   const loadCategoriesByRestaurant = async (restaurantId) => {
     if (!restaurantId) return;
 
@@ -66,17 +67,16 @@ const MenuManagement = () => {
       setCategories(res.data);
     } catch (err) {
       console.error(err);
-      setError("Failed to load categories");
+      setError(err.response?.data?.message || err.message || "Unknown error");
     } finally {
       setLoadingCategory(false);
     }
   };
 
-  // ================= HANDLE INPUT CHANGE =================
+  /* ================= HANDLE INPUT CHANGE ================= */
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // Khi đổi restaurant → load lại category
     if (name === "restaurant") {
       loadCategoriesByRestaurant(value);
       setMenuItem((prev) => ({ ...prev, restaurant: value, category: "" }));
@@ -86,7 +86,7 @@ const MenuManagement = () => {
     setMenuItem((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ================= HANDLE IMAGE UPLOAD (FILE) =================
+  /* ================= HANDLE IMAGE UPLOAD ================= */
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -95,19 +95,12 @@ const MenuManagement = () => {
     setPreview(URL.createObjectURL(file));
   };
 
-  // ================= SUBMIT FORM (FormData + file) =================
+  /* ================= SUBMIT FORM ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!menuItem.restaurant) {
-      setError("Please select a restaurant first!");
-      return;
-    }
-
-    if (!menuItem.category) {
-      setError("Please select a category!");
-      return;
-    }
+    if (!menuItem.restaurant) return setError("Please select a restaurant");
+    if (!menuItem.category) return setError("Please select a category");
 
     setLoading(true);
     setError("");
@@ -117,18 +110,16 @@ const MenuManagement = () => {
       const token = localStorage.getItem("token");
       const formData = new FormData();
 
-      // Các field text
+      // Text fields
       formData.append("name", menuItem.name);
       formData.append("description", menuItem.description);
       formData.append("price", parseFloat(menuItem.price));
       formData.append("categoryId", menuItem.category);
 
-      // ⚠️ restaurantId backend đang lấy từ token (owner),
-      // nếu route của bạn không cần thì KHÔNG cần append.
-      // Nếu bạn có sửa route để nhận restaurantId:
-      // formData.append("restaurantId", menuItem.restaurant);
+      // 🔥 BACKEND BẮT BUỘC CẦN restaurantId
+      formData.append("restaurantId", menuItem.restaurant);
 
-      // File ảnh – tên field PHẢI trùng với backend: req.files.image
+      // File image
       if (imageFile) {
         formData.append("image", imageFile);
       }
@@ -161,13 +152,13 @@ const MenuManagement = () => {
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "Failed to add menu item");
+      setError(err.response?.data?.message || err.message || "Unknown error");
     } finally {
       setLoading(false);
     }
   };
 
-  // ================= UI STYLE A + PASTEL =================
+  /* ================= UI ================= */
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-yellow-50">
       {/* HEADER */}
@@ -184,13 +175,14 @@ const MenuManagement = () => {
           <nav className="flex gap-3">
             <button
               onClick={() => navigate("/restaurant/menu")}
-              className="px-5 py-2 rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition"
+              className="px-5 py-2 rounded-full bg-gray-200 text-gray-700"
             >
               View Menu
             </button>
+
             <button
               onClick={() => navigate("/home")}
-              className="px-5 py-2 rounded-full bg-green-500 text-white font-semibold hover:bg-green-600 transition"
+              className="px-5 py-2 rounded-full bg-green-500 text-white"
             >
               Home
             </button>
@@ -205,20 +197,13 @@ const MenuManagement = () => {
             Add Menu Item
           </h2>
 
-          {error && (
-            <div className="bg-red-500 text-white p-3 rounded-xl mb-4">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="bg-green-500 text-white p-3 rounded-xl mb-4">
-              {success}
-            </div>
-          )}
+          {error && <div className="bg-red-500 text-white p-3 mb-4">{error}</div>}
+          {success && <div className="bg-green-500 text-white p-3 mb-4">{success}</div>}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+
             {/* RESTAURANT */}
-            <div className="flex flex-col space-y-2">
+            <div>
               <label className="text-lg font-semibold text-gray-900">
                 Restaurant
               </label>
@@ -226,9 +211,8 @@ const MenuManagement = () => {
                 name="restaurant"
                 value={menuItem.restaurant}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg bg-white text-gray-900 border border-gray-300 
-                           focus:outline-none focus:ring-2 focus:ring-green-400"
                 required
+                className="w-full px-4 py-3 bg-white border rounded-lg text-gray-900"
               >
                 <option value="">-- Select your restaurant --</option>
                 {restaurants.map((r) => (
@@ -240,7 +224,7 @@ const MenuManagement = () => {
             </div>
 
             {/* CATEGORY */}
-            <div className="flex flex-col space-y-2">
+            <div>
               <label className="text-lg font-semibold text-gray-900">
                 Category
               </label>
@@ -249,9 +233,8 @@ const MenuManagement = () => {
                 value={menuItem.category}
                 onChange={handleChange}
                 disabled={!menuItem.restaurant || loadingCategory}
-                className="w-full px-4 py-3 rounded-lg bg-white text-gray-900 border border-gray-300 
-                           disabled:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-green-400"
                 required
+                className="w-full px-4 py-3 bg-white border rounded-lg text-gray-900"
               >
                 <option value="">
                   {loadingCategory ? "Loading..." : "-- Select category --"}
@@ -265,40 +248,38 @@ const MenuManagement = () => {
             </div>
 
             {/* NAME */}
-            <div className="flex flex-col space-y-2">
+            <div>
               <label className="text-lg font-semibold text-gray-900">
                 Item Name
               </label>
               <input
                 type="text"
                 name="name"
+                placeholder="Name of the dish"
                 value={menuItem.name}
                 onChange={handleChange}
-                placeholder="Enter item name..."
-                className="w-full px-4 py-3 rounded-lg bg-white text-gray-900 placeholder-green-600
-                           border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400"
                 required
+                className="w-full px-4 py-3 bg-white border rounded-lg text-gray-900"
               />
             </div>
 
             {/* DESCRIPTION */}
-            <div className="flex flex-col space-y-2">
+            <div>
               <label className="text-lg font-semibold text-gray-900">
                 Description
               </label>
               <textarea
                 name="description"
-                rows={3}
                 value={menuItem.description}
+                placeholder="Description of the dish"
                 onChange={handleChange}
-                placeholder="Short description..."
-                className="w-full px-4 py-3 rounded-lg bg-white text-gray-900 placeholder-green-600
-                           border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400"
+                className="w-full px-4 py-3 bg-white border rounded-lg text-gray-900"
+                rows={3}
               />
             </div>
 
             {/* PRICE */}
-            <div className="flex flex-col space-y-2">
+            <div>
               <label className="text-lg font-semibold text-gray-900">
                 Price ($)
               </label>
@@ -306,47 +287,40 @@ const MenuManagement = () => {
                 type="number"
                 name="price"
                 value={menuItem.price}
-                step="0.01"
-                min="0"
+                placeholder="1.0$"
                 onChange={handleChange}
-                placeholder="0.00"
-                className="w-full px-4 py-3 rounded-lg bg-white text-gray-900 placeholder-green-600
-                           border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400"
                 required
+                step="0.01"
+                className="w-full px-4 py-3 bg-white border rounded-lg text-gray-900"
               />
             </div>
 
-            {/* DISH IMAGE UPLOAD (FILE) */}
-            <div className="flex flex-col space-y-2">
+            {/* IMAGE */}
+            <div>
               <label className="text-lg font-semibold text-gray-900">
                 Dish Image
               </label>
-
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleImageUpload}
-                className="w-full bg-white px-4 py-3 border border-gray-300 rounded-lg
-                           focus:outline-none focus:ring-2 focus:ring-green-400"
+                className="w-full px-4 py-3 bg-white border rounded-lg text-gray-900"
               />
 
               {preview && (
-                <div className="mt-2 flex justify-center">
-                  <img
-                    src={preview}
-                    alt="Dish preview"
-                    className="w-24 h-24 object-cover rounded-full shadow-md border"
-                  />
-                </div>
+                <img
+                  src={preview}
+                  alt="preview"
+                  className="w-24 h-24 rounded-full object-cover mt-3 mx-auto"
+                />
               )}
             </div>
 
-            {/* SUBMIT BUTTON */}
+            {/* SUBMIT */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-green-500 text-white rounded-full font-semibold
-                         hover:bg-green-600 transition disabled:opacity-50"
+              className="w-full py-3 bg-green-500 text-white rounded-full"
             >
               {loading ? "Adding..." : "Add Menu Item"}
             </button>
