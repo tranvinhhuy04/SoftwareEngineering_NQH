@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 const OrderHistory = () => {
   const [orders, setOrders] = useState([]);
+  const [restaurants, setRestaurants] = useState([]); // <-- thêm
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -30,6 +31,24 @@ const OrderHistory = () => {
     };
 
     fetchOrders();
+  }, []);
+
+  // ========================= FETCH RESTAURANTS =========================
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(
+          "http://localhost:8000/restaurant/getAllRestaurant",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setRestaurants(res.data || []);
+      } catch (err) {
+        console.error("Failed to load restaurants", err);
+      }
+    };
+
+    fetchRestaurants();
   }, []);
 
   // ========================= STATUS BADGE =========================
@@ -95,83 +114,93 @@ const OrderHistory = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 max-w-7xl mx-auto">
           
-          {orders.map((order) => (
-            <div
-              key={order._id}
-              onClick={() => navigate(`/orders/${order._id}`)}
-              className="bg-white rounded-3xl shadow-lg border hover:shadow-xl transition p-6"
-            >
-              {/* HEADER */}
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-bold flex items-center gap-2">
-                    <span className="px-2 py-1 bg-gray-200 rounded-lg text-gray-700 text-sm font-semibold">
-                      #{order?._id?.slice(-6)}
-                    </span>
-                    Order Details
-                  </h3>
+          {orders.map((order) => {
+            const restaurant = restaurants.find(
+              (r) => r._id === order.restaurantId
+            );
 
-                  <p className="text-gray-500 mt-1 text-sm">
-                    {formatDate(order?.orderDate)}
-                  </p>
+            return (
+              <div
+                key={order._id}
+                onClick={() => navigate(`/orders/${order._id}`)}
+                className="bg-white rounded-3xl shadow-lg border hover:shadow-xl transition p-6 cursor-pointer"
+              >
+                {/* HEADER */}
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-lg font-bold flex items-center gap-2">
+                      <span className="px-2 py-1 bg-gray-200 rounded-lg text-gray-700 text-sm font-semibold">
+                        #{order?._id?.slice(-6)}
+                      </span>
+                      Order Details
+                    </h3>
 
-                  <p className="text-sm text-gray-600 mt-1">
-                    Customer: <strong>{order.customerEmail}</strong>
-                  </p>
+                    <p className="text-gray-500 mt-1 text-sm">
+                      {formatDate(order?.orderDate)}
+                    </p>
+
+                    <p className="text-sm text-gray-600 mt-1 leading-5">
+                      Customer:   <strong>{order.customerEmail}</strong>
+        
+                    </p>
+                  </div>
+
+                  <span className={getStatusClass(order?.orderStatus)}>
+                    {order?.orderStatus
+                      ? order.orderStatus.charAt(0).toUpperCase() +
+                        order.orderStatus.slice(1)
+                      : "Unknown"}
+                  </span>
                 </div>
 
-                <span className={getStatusClass(order?.orderStatus)}>
-                  {order?.orderStatus
-                    ? order.orderStatus.charAt(0).toUpperCase() +
-                      order.orderStatus.slice(1)
-                    : "Unknown"}
-                </span>
-              </div>
-
-              {/* DELIVERY LOCATION */}
-              <div className="mt-3">
-                <h4 className="font-semibold text-gray-800 mb-2">
-                  Delivery Location:
-                </h4>
-                <div className="bg-gray-50 p-3 rounded-xl text-gray-700 text-sm">
-                  📍 {order?.deliveryLocation?.address}
-                  <br />
-                  ({order?.deliveryLocation?.latitude?.toFixed(4)},{" "}
-                  {order?.deliveryLocation?.longitude?.toFixed(4)})
+                {/* DELIVERY LOCATION */}
+                <div className="mt-3">
+                  <h4 className="font-semibold text-gray-800 mb-2">
+                    Delivery Location:
+                  </h4>
+                  <div className="bg-gray-50 p-3 rounded-xl text-gray-700 text-sm">
+                    📍 {order?.deliveryLocation?.address}
+                    <br />
+                    ({order?.deliveryLocation?.latitude?.toFixed(4)},{" "}
+                    {order?.deliveryLocation?.longitude?.toFixed(4)})
+                  </div>
                 </div>
-              </div>
 
-              {/* RESTAURANT LOCATION */}
-              <div className="mt-3">
-                <h4 className="font-semibold text-gray-800 mb-2">
-                  Restaurant:
-                </h4>
-                <div className="bg-gray-50 p-3 rounded-xl text-gray-700 text-sm">
-                  🍽 {order?.restaurantLocation?.address}
+                {/* RESTAURANT INFO */}
+                <div className="mt-3">
+                  <h4 className="font-semibold text-gray-800 mb-2">
+                    Restaurant:
+                  </h4>
+                  <div className="bg-gray-50 p-3 rounded-xl text-gray-700 text-sm">
+                    🍽{" "}
+                    {restaurant
+                      ? `${restaurant.name} – ${restaurant.address}`
+                      : "No restaurant information"}
+                  </div>
                 </div>
-              </div>
 
-              {/* TOTAL */}
-              <div className="mt-5 flex justify-between items-center text-xl">
-                <span className="text-gray-700 font-semibold">Total:</span>
-                <span className="text-green-600 font-extrabold">
-                  ${(order.totalAmount / 1000).toFixed(3)}
-                </span>
-              </div>
+                {/* TOTAL */}
+                <div className="mt-5 flex justify-between items-center text-xl">
+                  <span className="text-gray-700 font-semibold">Total:</span>
+                  <span className="text-green-600 font-extrabold">
+                    {order.totalAmount.toLocaleString("vi-VN")} ₫
+                  </span>
+                </div>
 
-              {/* DRONE BUTTON */}
-              {order?.deliveryMethod === "drone" && (
-                <button
-                  className="mt-5 w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition"
-                  onClick={() =>
-                    navigate(`/orders/${order._id}/drone-tracking`)
-                  }
-                >
-                  🚁 Track Drone Delivery
-                </button>
-              )}
-            </div>
-          ))}
+                {/* DRONE BUTTON */}
+                {order?.deliveryMethod === "drone" && (
+                  <button
+                    className="mt-5 w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition"
+                    onClick={() =>
+                      navigate(`/orders/${order._id}/drone-tracking`)
+                    }
+                  >
+                    🚁 Track Drone Delivery
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
