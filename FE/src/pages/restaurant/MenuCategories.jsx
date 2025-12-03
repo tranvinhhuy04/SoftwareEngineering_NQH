@@ -186,12 +186,6 @@ const MenuCategories = () => {
             <p className="text-xl mb-4 text-gray-700">
               No categories for this restaurant.
             </p>
-            <button
-              onClick={() => navigate("/restaurant/menu/categories/add")}
-              className="px-5 py-3 bg-green-500 text-white font-bold rounded-2xl hover:bg-green-600 transition"
-            >
-              Add Your First Category
-            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

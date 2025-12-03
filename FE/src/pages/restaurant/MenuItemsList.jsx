@@ -174,12 +174,6 @@ const MenuItemsList = () => {
         ) : menuItems.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-3xl shadow max-w-xl mx-auto border border-gray-200">
             <p className="text-xl font-medium text-gray-700 mb-4">No menu items for this restaurant.</p>
-            <button
-              onClick={() => navigate("/restaurant/menu/add")}
-              className="px-6 py-2 bg-green-500 text-white rounded-full shadow hover:bg-green-600 transition"
-            >
-              Add Your First Item
-            </button>
           </div>
         ) : (
           /* ITEMS GRID */
