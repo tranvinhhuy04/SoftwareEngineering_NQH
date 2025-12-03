@@ -23,6 +23,10 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminDroneList from "./pages/admin/AdminDroneList";
 import DroneTracking from "./pages/DroneTracking";
 
+
+import TestCreateOrder from "./pages/TestCreateOrder";
+
+
 const App = () => {
   return (
     <CartProvider>
@@ -47,6 +51,7 @@ const App = () => {
           </Route>
           <Route element={<ProtectedLayout allowedRoles={["customer"]} />}>
             <Route path="/create-order" element={<CreateOrder />} />
+            <Route path="/test-create-order" element={<TestCreateOrder />} />
             <Route path="/shopping_cart" element={<ShoppingCart />} />
 
             <Route

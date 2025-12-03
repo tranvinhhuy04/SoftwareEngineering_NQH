@@ -1,241 +1,180 @@
-// routes/paymentRoutes.js — BẢN CHUẨN + RabbitMQ
+// routes/paymentRoutes.js — BẢN CHUẨN VNPAY + RabbitMQ
 const express = require("express");
 const router = express.Router();
+const qs = require("qs");
+const crypto = require("crypto");
 
-const { verifyToken, allowRoles } = require("../utils/authMiddleware");
-const mongoose = require("mongoose");
 const Payment = require("../models/Payment");
-const { publishEvent } = require("../rabbitmq"); // 🔔 RabbitMQ
+const { verifyToken, allowRoles } = require("../utils/authMiddleware");
+const { publishEvent } = require("../rabbitmq");
 
-// ❌ BỎ KẾT NỐI MONGO Ở ĐÂY — server.js đã connect rồi
-
-// ✅ Khởi tạo Stripe theo kiểu an toàn
-const Stripe = require("stripe");
-const stripeKey = process.env.STRIPE_SECRET_KEY;
-
-// Nếu thiếu key, tạm disable các route Stripe để tránh crash
-if (!stripeKey) {
-  console.warn(
-    "⚠️  STRIPE_SECRET_KEY missing — payment routes disabled (dev fallback)"
-  );
-  router.post("/customer", verifyToken, allowRoles("customer"), (_req, res) =>
-    res
-      .status(503)
-      .json({ message: "Payment disabled (missing STRIPE_SECRET_KEY)" })
-  );
-  router.post(
-    "/create-payment-intent",
-    verifyToken,
-    allowRoles("customer"),
-    (_req, res) =>
-      res
-        .status(503)
-        .json({ message: "Payment disabled (missing STRIPE_SECRET_KEY)" })
-  );
-  router.get(
-    "/verify-payment/:paymentIntentId",
-    verifyToken,
-    allowRoles("customer"),
-    (_req, res) =>
-      res
-        .status(503)
-        .json({ message: "Payment disabled (missing STRIPE_SECRET_KEY)" })
-  );
-  router.post(
-    "/update/:paymentIntentId",
-    verifyToken,
-    allowRoles("customer"),
-    (_req, res) =>
-      res
-        .status(503)
-        .json({ message: "Payment disabled (missing STRIPE_SECRET_KEY)" })
-  );
-  module.exports = router;
-  return;
+/* ======================================================
+    🧩 Sort object keys — required by VNPAY checksum
+====================================================== */
+function sortObj(obj) {
+  let sorted = {};
+  let keys = Object.keys(obj).sort();
+  keys.forEach((key) => (sorted[key] = obj[key]));
+  return sorted;
 }
 
-const stripe = Stripe(stripeKey);
+/* ======================================================
+    🧾 TẠO PAYMENT VNPay
+====================================================== */
+router.post("/test", (req, res) => {
+    res.json({ message: "Test OK" });
+});
 
-// ========== Các route thật ==========
 router.post(
-  "/customer",
+  "/vnpay/create",
   verifyToken,
   allowRoles("customer"),
   async (req, res) => {
     try {
-      const { email, name } = req.body;
-      if (!email || !name)
-        return res.status(400).json({ message: "Email and name are required" });
+      const { orderId, amount } = req.body;
 
-      let payment = await Payment.findOne({ userId: req.user.id });
-      let stripeCustomerId = payment?.stripeCustomerId;
-
-      if (!stripeCustomerId) {
-        const customer = await stripe.customers.create({
-          email,
-          name,
-          metadata: { userId: req.user.id },
+      if (!orderId || !amount) {
+        return res.status(400).json({
+          message: "orderId & amount are required",
         });
-        stripeCustomerId = customer.id;
-
-        if (payment) {
-          payment.stripeCustomerId = stripeCustomerId;
-          await payment.save();
-        } else {
-          await new Payment({
-            userId: req.user.id,
-            stripeCustomerId,
-            amount: 0,
-            currency: "usd",
-            status: "canceled",
-          }).save();
-        }
       }
 
-      const paymentMethods = await stripe.paymentMethods.list({
-        customer: stripeCustomerId,
-        type: "card",
-      });
+      const tmnCode = process.env.VNPAY_TMNCODE;
+      const secretKey = process.env.VNPAY_HASHSECRET;
+      const vnpUrl = process.env.VNPAY_URL;
+      const returnUrl = process.env.VNPAY_RETURN_URL;
 
-      res.json({
-        stripeCustomerId,
-        paymentMethods: paymentMethods.data || [],
-      });
-    } catch (err) {
-      console.error("Customer creation error:", err);
-      res
-        .status(500)
-        .json({ message: "Failed to manage customer", error: err.message });
-    }
-  }
-);
-
-router.post(
-  "/create-payment-intent",
-  verifyToken,
-  allowRoles("customer"),
-  async (req, res) => {
-    const { amount, currency, metadata, billingDetails } = req.body;
-    if (!amount || !currency || !billingDetails) {
-      return res.status(400).json({
-        message: "Amount, currency, and billing details are required",
-      });
-    }
-
-    try {
-      let payment = await Payment.findOne({ userId: req.user.id });
-      let stripeCustomerId = payment?.stripeCustomerId;
-
-      if (!stripeCustomerId) {
-        const customer = await stripe.customers.create({
-          email: billingDetails.email,
-          name: billingDetails.name,
-          address: billingDetails.address,
-          metadata: { userId: req.user.id },
-        });
-        stripeCustomerId = customer.id;
-      }
-
-      const paymentIntent = await stripe.paymentIntents.create({
+      // Tạo payment DB trước
+      const payment = await Payment.create({
+        orderId,
+        customerEmail: req.user.email,
         amount,
-        currency,
-        customer: stripeCustomerId,
-        metadata,
-        automatic_payment_methods: { enabled: true },
-        setup_future_usage: "on_session",
+        paymentMethod: "vnpay",
+        paymentStatus: "processing",
       });
 
-      const newPayment = new Payment({
-        paymentIntentId: paymentIntent.id,
-        userId: req.user.id,
-        stripeCustomerId,
-        amount,
-        currency,
-        status: paymentIntent.status,
-        billingName: billingDetails.name,
-        billingEmail: billingDetails.email,
-        billingAddress: billingDetails.address,
+      const txnRef = payment._id.toString(); // dùng làm mã giao dịch
+      const now = new Date();
+      const createDate = now.toISOString().replace(/[-T:.Z]/g, "").slice(0, 14);
+
+      const ipAddr = req.ip || "127.0.0.1";
+
+      let params = {
+        vnp_Version: "2.1.0",
+        vnp_Command: "pay",
+        vnp_TmnCode: tmnCode,
+        vnp_Amount: amount * 100,
+        vnp_CurrCode: "VND",
+        vnp_TxnRef: txnRef,
+        vnp_OrderInfo: "Thanh toan don hang " + orderId,
+        vnp_OrderType: "billpayment",
+        vnp_Locale: "vn",
+        vnp_ReturnUrl: returnUrl,
+        vnp_IpAddr: ipAddr,
+        vnp_CreateDate: createDate,
+      };
+
+      params = sortObj(params);
+      const signData = qs.stringify(params, { encode: false });
+
+      const hmac = crypto.createHmac("sha512", secretKey);
+      const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+
+      params.vnp_SecureHash = signed;
+
+      const payUrl = `${vnpUrl}?${qs.stringify(params, { encode: false })}`;
+
+      res.json({ payUrl });
+    } catch (err) {
+      console.error("VNPay create error:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+);
+
+/* ======================================================
+    🌐 FE REDIRECT RETURN URL — Chỉ dùng để hiển thị
+====================================================== */
+router.get("/vnpay/return", async (req, res) => {
+  const code = req.query.vnp_ResponseCode;
+
+  if (code === "00") {
+    return res.json({
+      message: "Payment success (waiting IPN verification)",
+      query: req.query,
+    });
+  }
+
+  res.json({ message: "Payment failed", query: req.query });
+});
+
+/* ======================================================
+    🔥 VNPay IPN (Webhook) — Xác nhận giao dịch thật
+====================================================== */
+router.get("/vnpay/webhook", async (req, res) => {
+  try {
+    let vnp_Params = { ...req.query };
+    const receivedHash = vnp_Params["vnp_SecureHash"];
+
+    // Remove hash fields
+    delete vnp_Params["vnp_SecureHash"];
+    delete vnp_Params["vnp_SecureHashType"];
+
+    vnp_Params = sortObj(vnp_Params);
+
+    const secretKey = process.env.VNPAY_HASHSECRET;
+    const signData = qs.stringify(vnp_Params, { encode: false });
+
+    const signedCheck = crypto
+      .createHmac("sha512", secretKey)
+      .update(Buffer.from(signData, "utf-8"))
+      .digest("hex");
+
+    // Sai checksum → từ chối
+    if (signedCheck !== receivedHash) {
+      return res.json({ RspCode: "97", Message: "Invalid signature" });
+    }
+
+    // Lấy thông tin thanh toán
+    const paymentId = vnp_Params["vnp_TxnRef"];
+    const rspCode = vnp_Params["vnp_ResponseCode"];
+    const bankCode = vnp_Params["vnp_BankCode"];
+    const transactionId = vnp_Params["vnp_TransactionNo"];
+
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      return res.json({ RspCode: "01", Message: "Payment not found" });
+    }
+
+    // Cập nhật trạng thái thanh toán
+    const status = rspCode === "00" ? "paid" : "failed";
+
+    const updated = await Payment.findByIdAndUpdate(
+      paymentId,
+      {
+        paymentStatus: status,
+        bankCode,
+        transactionId,
+        vnpResponseCode: rspCode,
+      },
+      { new: true }
+    );
+
+    // Publish event nếu thành công
+    if (rspCode === "00") {
+      await publishEvent("payment.succeeded", {
+        orderId: updated.orderId.toString(),
+        amount: updated.amount,
+        method: "vnpay",
+        transactionId,
       });
-
-      await newPayment.save();
-
-      res.json({ clientSecret: paymentIntent.client_secret });
-    } catch (err) {
-      console.error("PaymentIntent creation error:", err);
-      if (err.name === "ValidationError") {
-        return res
-          .status(400)
-          .json({ message: "Payment validation failed", details: err.errors });
-      }
-      res.status(500).json({ message: "Failed to create payment intent" });
     }
+
+    res.json({ RspCode: "00", Message: "Success" });
+  } catch (err) {
+    console.error("Webhook error:", err);
+    res.json({ RspCode: "99", Message: err.message });
   }
-);
-
-router.get(
-  "/verify-payment/:paymentIntentId",
-  verifyToken,
-  allowRoles("customer"),
-  async (req, res) => {
-    const { paymentIntentId } = req.params;
-    try {
-      const paymentIntent = await stripe.paymentIntents.retrieve(
-        paymentIntentId
-      );
-      await Payment.findOneAndUpdate(
-        { paymentIntentId },
-        { status: paymentIntent.status },
-        { new: true }
-      );
-      res.json({ status: paymentIntent.status });
-    } catch (err) {
-      console.error("Payment verification error:", err);
-      res.status(500).json({ message: "Failed to verify payment" });
-    }
-  }
-);
-
-// 🔄 Gắn orderId vào payment + publish event payment.succeeded
-router.post(
-  "/update/:paymentIntentId",
-  verifyToken,
-  allowRoles("customer"),
-  async (req, res) => {
-    const { paymentIntentId } = req.params;
-    const { orderId } = req.body;
-    try {
-      const payment = await Payment.findOneAndUpdate(
-        { paymentIntentId },
-        { orderId },
-        { new: true }
-      );
-      if (!payment)
-        return res.status(404).json({ message: "Payment not found" });
-
-      // Chỉ publish khi payment đã thành công và có orderId
-      if (payment.status === "succeeded" && orderId) {
-        try {
-          await publishEvent("payment.succeeded", {
-            orderId,
-            paymentIntentId,
-            amount: payment.amount,
-            currency: payment.currency,
-            userId: payment.userId,
-          });
-        } catch (e) {
-          console.error(
-            "[RabbitMQ] Failed to publish payment.succeeded:",
-            e.message
-          );
-        }
-      }
-
-      res.json({ message: "Payment updated", payment });
-    } catch (err) {
-      console.error("Payment update error:", err);
-      res.status(500).json({ message: "Failed to update payment" });
-    }
-  }
-);
+});
 
 module.exports = router;

@@ -11,18 +11,18 @@ const OrderDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // ========================= FETCH ORDER DETAILS =========================
   useEffect(() => {
     const fetchOrderDetails = async () => {
       try {
         const token = localStorage.getItem("token");
 
-        const res = await axios.get(`http://localhost:8000/order/orders/details/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          `http://localhost:8000/order/orders/details/${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-        setOrder(res.data.order);
-        setItems(res.data.items);
+        setOrder(res.data.order || {});
+        setItems(res.data.items || []);
       } catch (err) {
         setError("Failed to load order details");
       } finally {
@@ -54,6 +54,7 @@ const OrderDetail = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return "Unknown";
     return new Intl.DateTimeFormat("en-US", {
       dateStyle: "medium",
       timeStyle: "short",
@@ -77,8 +78,6 @@ const OrderDetail = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-yellow-50 p-10">
-
-      {/* BACK BUTTON */}
       <button
         onClick={() => navigate(-1)}
         className="mb-6 px-5 py-2 bg-gray-200 rounded-xl text-gray-700 hover:bg-gray-300 transition"
@@ -86,7 +85,6 @@ const OrderDetail = () => {
         ← Back
       </button>
 
-      {/* HEADER */}
       <h1 className="text-4xl font-extrabold text-center mb-6 bg-gradient-to-r 
         from-green-600 to-yellow-500 bg-clip-text text-transparent">
         🧾 Order Details
@@ -94,50 +92,52 @@ const OrderDetail = () => {
 
       <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl p-8 border">
 
-        {/* ORDER ID + DATE + STATUS */}
+        {/* ORDER HEADER */}
         <div className="flex justify-between items-start mb-6">
           <div>
             <h3 className="text-xl font-bold flex items-center gap-2">
               <span className="px-2 py-1 bg-gray-200 rounded-lg text-gray-700 text-sm font-semibold">
-                #{order._id.slice(-6)}
+                #{order?._id?.slice(-6) || "??????"}
               </span>
               Order Overview
             </h3>
 
-            <p className="text-gray-500 mt-1">{formatDate(order.createdAt)}</p>
+            <p className="text-gray-500 mt-1">{formatDate(order?.createdAt)}</p>
 
             <p className="text-gray-600 mt-1">
-              Customer: <strong>{order.customerEmail}</strong>
+              Customer: <strong>{order?.customerEmail}</strong>
             </p>
           </div>
 
-          <span className={getStatusClass(order.orderStatus)}>
-            {order.orderStatus.charAt(0).toUpperCase() +
-              order.orderStatus.slice(1)}
+          <span className={getStatusClass(order?.orderStatus)}>
+            {order?.orderStatus
+              ? order.orderStatus.charAt(0).toUpperCase() +
+                order.orderStatus.slice(1)
+              : "Unknown"}
           </span>
         </div>
 
         {/* LOCATIONS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-          {/* Delivery Location */}
+          {/* DELIVERY LOCATION */}
           <div>
             <h4 className="font-semibold text-gray-800 mb-2">
               Delivery Location:
             </h4>
             <div className="bg-gray-50 p-4 rounded-xl text-gray-700 text-sm">
-              📍 {order.deliveryLocation.address}
+              📍 {order?.deliveryLocation?.address || "No address provided"}
               <br />
-              ({order.deliveryLocation.latitude.toFixed(4)},{" "}
-              {order.deliveryLocation.longitude.toFixed(4)})
+              ({order?.deliveryLocation?.latitude?.toFixed(4) || "?"},{" "}
+              {order?.deliveryLocation?.longitude?.toFixed(4) || "?"})
             </div>
           </div>
 
-          {/* Restaurant Location */}
+          {/* RESTAURANT LOCATION */}
           <div>
             <h4 className="font-semibold text-gray-800 mb-2">Restaurant:</h4>
             <div className="bg-gray-50 p-4 rounded-xl text-gray-700 text-sm">
-              🍽 {order.restaurantLocation.address}
+              🍽 {order?.restaurantLocation?.address || "No restaurant address"}
             </div>
           </div>
         </div>
@@ -154,7 +154,6 @@ const OrderDetail = () => {
               >
                 <div className="text-gray-800 font-medium">
                   {item.quantity}x {item.menuId}
-                  
                 </div>
 
                 <div className="text-green-600 font-bold">
@@ -169,12 +168,12 @@ const OrderDetail = () => {
         <div className="mt-10 flex justify-between items-center text-2xl">
           <span className="font-semibold text-gray-700">Total:</span>
           <span className="text-green-600 font-extrabold">
-            ${(order.totalAmount / 1000).toFixed(3)}
+            ${(order?.totalAmount / 1000).toFixed(3)}
           </span>
         </div>
 
-        {/* DRONE TRACKING BUTTON */}
-        {order.deliveryMethod === "drone" && (
+        {/* DRONE TRACKING */}
+        {order?.deliveryMethod === "drone" && (
           <button
             className="mt-8 w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition"
             onClick={() => navigate(`/orders/${order._id}/drone-tracking`)}

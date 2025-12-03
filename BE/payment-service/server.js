@@ -18,7 +18,7 @@ mongoose
   .catch((err) => console.error("❌ MongoDB error:", err));
 
 // Routes
-const paymentRoutes = require("./routes/paymentVnpay");
+const paymentRoutes = require("./routes/paymentRoutes");
 app.use("/", paymentRoutes);
 
 const PORT = process.env.PORT || 5008;
