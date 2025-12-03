@@ -167,16 +167,16 @@ router.patch(
   allowRoles("delivery", "restaurant"),
   async (req, res) => {
     try {
-      const { status } = req.body;
+      const { orderStatus } = req.body;
       const { id } = req.params;
 
       const allowed = ["accepted", "in-transit", "delivered"];
-      if (!allowed.includes(status))
+      if (!allowed.includes(orderStatus))
         return res.status(400).json({ message: "Invalid status" });
 
-      const updateData = { orderStatus: status };
+      const updateData = { orderStatus };
 
-      if (req.user.role === "delivery" && status === "in-transit") {
+      if (req.user.role === "delivery" && orderStatus === "in-transit") {
         updateData.deliveryPersonEmail = req.user.email;
       }
 

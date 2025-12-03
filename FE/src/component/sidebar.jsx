@@ -140,10 +140,16 @@ const Sidebar = ({ user }) => {
 
           {/* DELIVERY */}
           {isDelivery && (
+            <>
             <Link to="/delivery-admin" className={linkClass("/delivery-admin")}>
               <Truck size={20} />
-              <span className={labelClass}>My Orders</span>
+              <span className={labelClass}>Orders delivered</span>
             </Link>
+            <Link to="delivery/orders/all" className={linkClass("/orders/all")}>
+              <Truck size={20} />
+              <span className={labelClass}>All Orders</span>
+            </Link>
+            </>
           )}
 
           {/* ADMIN */}

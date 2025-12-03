@@ -37,7 +37,7 @@ export default function Register() {
     }
   };
 return (
-  <div className="min-h-screen bg-gradient-to-br from-green-50 via-yellow-50 to-white">
+  <div className="min-h-screen flex items-center justify-center min-h-screen bg-gradient-to-br from-green-50 via-yellow-50 to-white">
 
     <div className="w-full max-w-2xl bg-white/70 backdrop-blur-xl shadow-xl
                     rounded-2xl p-10 border border-white/40">

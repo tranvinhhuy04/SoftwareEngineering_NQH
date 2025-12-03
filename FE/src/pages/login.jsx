@@ -44,7 +44,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-yellow-50 to-white">
+    <div className="min-h-screen flex items-center justify-center min-h-screen bg-gradient-to-br from-green-50 via-yellow-50 to-white">
 
       {/* Glass Card */}
       <div className="w-full max-w-md bg-white/70 backdrop-blur-xl shadow-xl 

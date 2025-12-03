@@ -8,7 +8,7 @@ const Home = () => {
   return (
     <>
       {/* ================== HERO (STYLE A) ================== */}
-      <div className="min-h-screen bg-white relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-yellow-50 to-white">
 
         {/* Background food image */}
         <div
