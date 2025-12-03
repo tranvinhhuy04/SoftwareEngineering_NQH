@@ -1,4 +1,4 @@
-// routes/paymentRoutes.js — BẢN CHUẨN VNPAY + RabbitMQ
+// routes/paymentRoutes.js — BẢN CHUẨN VNPAY + RabbitMQ (ĐÃ FIX)
 const express = require("express");
 const router = express.Router();
 const qs = require("qs");
@@ -22,7 +22,7 @@ function sortObj(obj) {
     🧾 TẠO PAYMENT VNPay
 ====================================================== */
 router.post("/test", (req, res) => {
-    res.json({ message: "Test OK" });
+  res.json({ message: "Test OK" });
 });
 
 router.post(
@@ -30,6 +30,17 @@ router.post(
   verifyToken,
   allowRoles("customer"),
   async (req, res) => {
+    console.log("===== DEBUG REQUEST =====");
+    console.log("Headers:", req.headers);
+    console.log("Body:", req.body);
+    console.log("ENV:", {
+      tmn: process.env.VNP_TMN_CODE,
+      secret: process.env.VNP_HASH_SECRET,
+      url: process.env.VNP_URL,
+      returnUrl: process.env.VNP_RETURN_URL
+    });
+    console.log("==========================");
+
     try {
       const { orderId, amount } = req.body;
 
@@ -39,12 +50,20 @@ router.post(
         });
       }
 
-      const tmnCode = process.env.VNPAY_TMNCODE;
-      const secretKey = process.env.VNPAY_HASHSECRET;
-      const vnpUrl = process.env.VNPAY_URL;
-      const returnUrl = process.env.VNPAY_RETURN_URL;
+      // =============================
+      // 🔥 LOAD ENV ĐÚNG CHUẨN VNPAY
+      // =============================
+      const tmnCode = process.env.VNP_TMN_CODE;
+      const secretKey = process.env.VNP_HASH_SECRET;
+      const vnpUrl = process.env.VNP_URL;
+      const returnUrl = process.env.VNP_RETURN_URL;
 
-      // Tạo payment DB trước
+      if (!tmnCode || !secretKey) {
+        console.error("❌ ENV ERROR — VNP_TMN_CODE hoặc VNP_HASH_SECRET bị undefined");
+        return res.status(500).json({ message: "VNPAY ENV ERROR" });
+      }
+
+      // Tạo Payment DB
       const payment = await Payment.create({
         orderId,
         customerEmail: req.user.email,
@@ -57,8 +76,22 @@ router.post(
       const now = new Date();
       const createDate = now.toISOString().replace(/[-T:.Z]/g, "").slice(0, 14);
 
-      const ipAddr = req.ip || "127.0.0.1";
+      // const ipAddr = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+      let ipAddr =
+        req.headers["x-forwarded-for"] ||
+        req.socket?.remoteAddress ||
+        req.connection?.remoteAddress ||
+        "127.0.0.1";
 
+      if (ipAddr.includes("::ffff:")) {
+        ipAddr = ipAddr.replace("::ffff:", "");
+      }
+
+
+
+      // =============================
+      //  🔧 Build request params
+      // =============================
       let params = {
         vnp_Version: "2.1.0",
         vnp_Command: "pay",
@@ -66,7 +99,7 @@ router.post(
         vnp_Amount: amount * 100,
         vnp_CurrCode: "VND",
         vnp_TxnRef: txnRef,
-        vnp_OrderInfo: "Thanh toan don hang " + orderId,
+        vnp_OrderInfo: `Thanh toan don hang ${orderId}`,
         vnp_OrderType: "billpayment",
         vnp_Locale: "vn",
         vnp_ReturnUrl: returnUrl,
@@ -77,19 +110,25 @@ router.post(
       params = sortObj(params);
       const signData = qs.stringify(params, { encode: false });
 
+      // Tạo chữ ký SHA512
       const hmac = crypto.createHmac("sha512", secretKey);
-      const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+      const signed = hmac.update(signData).digest("hex");
 
+      // 🔥 Quan trọng: thêm cả type
+      params.vnp_SecureHashType = "SHA512";
       params.vnp_SecureHash = signed;
 
       const payUrl = `${vnpUrl}?${qs.stringify(params, { encode: false })}`;
 
+
       res.json({ payUrl });
+
     } catch (err) {
       console.error("VNPay create error:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   }
+
 );
 
 /* ======================================================
@@ -116,26 +155,23 @@ router.get("/vnpay/webhook", async (req, res) => {
     let vnp_Params = { ...req.query };
     const receivedHash = vnp_Params["vnp_SecureHash"];
 
-    // Remove hash fields
     delete vnp_Params["vnp_SecureHash"];
     delete vnp_Params["vnp_SecureHashType"];
 
     vnp_Params = sortObj(vnp_Params);
 
-    const secretKey = process.env.VNPAY_HASHSECRET;
+    const secretKey = process.env.VNP_HASH_SECRET;
     const signData = qs.stringify(vnp_Params, { encode: false });
 
     const signedCheck = crypto
       .createHmac("sha512", secretKey)
-      .update(Buffer.from(signData, "utf-8"))
+      .update(signData)
       .digest("hex");
 
-    // Sai checksum → từ chối
     if (signedCheck !== receivedHash) {
       return res.json({ RspCode: "97", Message: "Invalid signature" });
     }
 
-    // Lấy thông tin thanh toán
     const paymentId = vnp_Params["vnp_TxnRef"];
     const rspCode = vnp_Params["vnp_ResponseCode"];
     const bankCode = vnp_Params["vnp_BankCode"];
@@ -146,7 +182,6 @@ router.get("/vnpay/webhook", async (req, res) => {
       return res.json({ RspCode: "01", Message: "Payment not found" });
     }
 
-    // Cập nhật trạng thái thanh toán
     const status = rspCode === "00" ? "paid" : "failed";
 
     const updated = await Payment.findByIdAndUpdate(
@@ -160,7 +195,6 @@ router.get("/vnpay/webhook", async (req, res) => {
       { new: true }
     );
 
-    // Publish event nếu thành công
     if (rspCode === "00") {
       await publishEvent("payment.succeeded", {
         orderId: updated.orderId.toString(),
@@ -171,6 +205,7 @@ router.get("/vnpay/webhook", async (req, res) => {
     }
 
     res.json({ RspCode: "00", Message: "Success" });
+
   } catch (err) {
     console.error("Webhook error:", err);
     res.json({ RspCode: "99", Message: err.message });

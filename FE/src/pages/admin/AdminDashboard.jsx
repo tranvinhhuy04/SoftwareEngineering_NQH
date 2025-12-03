@@ -1,299 +1,550 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
-import "../../styles/theme.css";
-
-const API_BASE = "http://localhost:8000";
+import '../../styles/theme.css';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [restaurants, setRestaurants] = useState([]);
-  const [restaurantMap, setRestaurantMap] = useState({});
   const [loading, setLoading] = useState(true);
-
-  const [filters, setFilters] = useState({
-    restaurantId: "",
-    orderStatus: "",
-    paymentStatus: "",
-    deliveryMethod: "",
-  });
+  const [activeTab, setActiveTab] = useState("stats"); // "stats" or "accounts"
+  const [customers, setCustomers] = useState([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [restaurants, setRestaurants] = useState([]);
+  const [loadingRestaurants, setLoadingRestaurants] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
+    const fetchStats = async () => {
       try {
         const token = localStorage.getItem("token");
-
-        const [statsRes, ordersRes, restRes] = await Promise.all([
-          axios.get(`${API_BASE}/order/admin/stats`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`${API_BASE}/order/admin/all`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`${API_BASE}/restaurant/getAllRestaurant`),
-        ]);
-
-        const restMap = {};
-        restRes.data.forEach((r) => (restMap[r._id] = r.name));
-
-        setStats(statsRes.data);
-        setOrders(ordersRes.data || []);
-        setRestaurants(restRes.data || []);
-        setRestaurantMap(restMap);
+        // Try API Gateway first, then fall back to known order-service ports
+        // try direct service ports first (avoid gateway 404 noise), then gateway
+        const urls = ["http://localhost:8000/order/admin/stats"];
+        let res = null;
+        for (const url of urls) {
+          try {
+            res = await axios.get(url, {
+              headers: { Authorization: `Bearer ${token}` },
+              timeout: 4000,
+            });
+            if (res && res.status === 200) break;
+          } catch (_err) {
+            // try next silently (we'll only log once all endpoints fail)
+            void _err;
+          }
+        }
+        if (!res) throw new Error("All stats endpoints failed");
+        setStats(res.data);
+      } catch (err) {
+        console.error("Admin stats error:", err);
       } finally {
         setLoading(false);
       }
     };
-    load();
+    fetchStats();
   }, []);
 
-  if (loading) return <CenteredText text="Loading dashboard..." />;
-  if (!stats) return <CenteredText text="No statistics available." />;
+  useEffect(() => {
+    if (activeTab === "accounts") {
+      fetchCustomers();
+      fetchRestaurants();
+    }
+  }, [activeTab]);
 
-  const filteredOrders = orders.filter((o) => {
-    const f = filters;
-    if (f.restaurantId && o.restaurantId !== f.restaurantId) return false;
-    if (f.orderStatus && o.orderStatus !== f.orderStatus) return false;
-    if (f.paymentStatus && o.paymentStatus !== f.paymentStatus) return false;
-    if (f.deliveryMethod && o.deliveryMethod !== f.deliveryMethod) return false;
-    return true;
-  });
+  const fetchCustomers = async () => {
+    setLoadingCustomers(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get("http://localhost:8000/auth/admin/customers", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      // Fetch order counts for customers
+      const customerIds = res.data.map(c => c._id);
+      let orderCounts = {};
+      if (customerIds.length > 0) {
+        try {
+          const countsRes = await axios.post(
+            "http://localhost:8000/order/admin/customers/order-counts",
+            { customerIds },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          orderCounts = countsRes.data;
+        } catch (err) {
+          console.warn("Failed to fetch customer order counts:", err);
+        }
+      }
+      
+      // Add order count to each customer
+      const customersWithCounts = res.data.map(customer => ({
+        ...customer,
+        orderCount: orderCounts[customer._id] || 0
+      }));
+      
+      setCustomers(customersWithCounts);
+    } catch (err) {
+      console.error("Failed to fetch customers:", err);
+      alert("Không thể tải danh sách khách hàng");
+    } finally {
+      setLoadingCustomers(false);
+    }
+  };
+
+  const fetchRestaurants = async () => {
+    setLoadingRestaurants(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get("http://localhost:8000/restaurant/api/restaurants", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      // Fetch order counts for restaurants
+      const restaurantIds = res.data.map(r => r._id);
+      let orderCounts = {};
+      if (restaurantIds.length > 0) {
+        try {
+          const countsRes = await axios.post(
+            "http://localhost:8000/order/admin/restaurants/order-counts",
+            { restaurantIds },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          orderCounts = countsRes.data;
+        } catch (err) {
+          console.warn("Failed to fetch restaurant order counts:", err);
+        }
+      }
+      
+      // Add order count to each restaurant
+      const restaurantsWithCounts = res.data.map(restaurant => ({
+        ...restaurant,
+        orderCount: orderCounts[restaurant._id] || 0
+      }));
+      
+      setRestaurants(restaurantsWithCounts);
+    } catch (err) {
+      console.error("Failed to fetch restaurants:", err);
+      alert("Không thể tải danh sách nhà hàng");
+    } finally {
+      setLoadingRestaurants(false);
+    }
+  };
+
+  const handleDeleteCustomer = async (customerId, username) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa tài khoản "${username}"?`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:8000/auth/admin/customers/${customerId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("Xóa tài khoản thành công!");
+      fetchCustomers(); // Refresh list
+    } catch (err) {
+      console.error("Failed to delete customer:", err);
+      const message = err.response?.data?.message || "Không thể xóa tài khoản";
+      alert(message);
+    }
+  };
+
+  const handleLockCustomer = async (customerId, username, currentLockStatus) => {
+    const action = currentLockStatus ? "mở khóa" : "khóa";
+    if (!window.confirm(`Bạn có chắc muốn ${action} tài khoản "${username}"?`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.patch(
+        `http://localhost:8000/auth/admin/customers/${customerId}/lock`,
+        { isLocked: !currentLockStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert(`${action.charAt(0).toUpperCase() + action.slice(1)} tài khoản thành công!`);
+      fetchCustomers(); // Refresh list
+    } catch (err) {
+      console.error("Failed to lock/unlock customer:", err);
+      const message = err.response?.data?.message || `Không thể ${action} tài khoản`;
+      alert(message);
+    }
+  };
+
+  const handleDeleteRestaurant = async (restaurantId, restaurantName) => {
+    if (!window.confirm(`Bạn có chắc muốn XÓA VĨNH VIỄN nhà hàng "${restaurantName}"?\n\nHành động này sẽ xóa:\n- Nhà hàng\n- Tất cả menu items\n- Tài khoản owner\n\nHành động này không thể hoàn tác!`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:8000/restaurant/admin/restaurants/${restaurantId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("Xóa nhà hàng thành công!");
+      fetchRestaurants(); // Refresh list
+    } catch (err) {
+      console.error("Failed to delete restaurant:", err);
+      const message = err.response?.data?.message || "Không thể xóa nhà hàng";
+      alert(message);
+    }
+  };
+
+  const handleLockRestaurant = async (restaurantId, restaurantName, currentLockStatus) => {
+    const action = currentLockStatus ? "mở khóa" : "khóa";
+    if (!window.confirm(`Bạn có chắc muốn ${action} nhà hàng "${restaurantName}"?`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.patch(
+        `http://localhost:8000/restaurant/admin/restaurants/${restaurantId}/lock`,
+        { isLocked: !currentLockStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert(`${action.charAt(0).toUpperCase() + action.slice(1)} nhà hàng thành công!`);
+      fetchRestaurants(); // Refresh list
+    } catch (err) {
+      console.error("Failed to lock/unlock restaurant:", err);
+      const message = err.response?.data?.message || `Không thể ${action} nhà hàng`;
+      alert(message);
+    }
+  };
+
+  if (loading) return <div className="p-6 text-white text-lg">Loading dashboard...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 text-gray-800">
-      <div className="max-w-6xl mx-auto space-y-10">
+    <div className="app-root py-8">
+      <div className="container mx-auto">
+        <h1 className="orders-title">Admin Dashboard</h1>
 
-        <h1 className="text-3xl font-bold text-center text-green-700">
-          Admin Dashboard
-        </h1>
+        {/* Tabs */}
+        <div className="flex gap-4 mb-6 border-b border-gray-700">
+          <button
+            onClick={() => setActiveTab("stats")}
+            className={`px-4 py-2 font-semibold transition-colors ${
+              activeTab === "stats"
+                ? "text-green-400 border-b-2 border-green-400"
+                : "text-gray-400 hover:text-gray-200"
+            }`}
+          >
+            📊 Thống kê
+          </button>
+          <button
+            onClick={() => setActiveTab("accounts")}
+            className={`px-4 py-2 font-semibold transition-colors ${
+              activeTab === "accounts"
+                ? "text-green-400 border-b-2 border-green-400"
+                : "text-gray-400 hover:text-gray-200"
+            }`}
+          >
+            👥 Quản lý tài khoản
+          </button>
+        </div>
 
-        {/* SUMMARY */}
-        <SummaryCards stats={stats} />
+        {/* Stats Tab */}
+        {activeTab === "stats" && stats && <StatsView stats={stats} />}
 
-        {/* FILTERS */}
-        <FilterPanel
-          filters={filters}
-          setFilters={setFilters}
-          restaurants={restaurants}
-        />
-
-        {/* FULL ORDER TABLE */}
-        <OrderTable orders={filteredOrders} restaurantMap={restaurantMap} />
-      </div>
-    </div>
-  );
-}
-
-/* ============================================================
-   COMPONENTS
-============================================================ */
-
-function CenteredText({ text }) {
-  return (
-    <div className="p-6 text-center text-gray-600 text-lg">{text}</div>
-  );
-}
-
-function SummaryCards({ stats }) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-      <Card label="Total Orders" value={stats.totalOrders} />
-      <Card label="Total Revenue" value={formatCurrency(stats.totalRevenue)} />
-    </div>
-  );
-}
-
-function Card({ label, value }) {
-  return (
-    <div className="bg-white shadow rounded-xl p-5 text-center border">
-      <div className="text-sm text-gray-500">{label}</div>
-      <div className="text-2xl font-bold text-green-700">{value}</div>
-    </div>
-  );
-}
-
-function FilterPanel({ filters, setFilters, restaurants }) {
-  const update = (e) =>
-    setFilters({ ...filters, [e.target.name]: e.target.value });
-
-  const clear = () =>
-    setFilters({
-      restaurantId: "",
-      orderStatus: "",
-      paymentStatus: "",
-      deliveryMethod: "",
-    });
-
-  return (
-    <div className="bg-white shadow rounded-xl p-6 border">
-      <h2 className="text-xl font-semibold mb-4 text-green-700">
-        Filters
-      </h2>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Select
-          label="Restaurant"
-          name="restaurantId"
-          value={filters.restaurantId}
-          onChange={update}
-          options={restaurants.map((r) => ({ label: r.name, value: r._id }))}
-        />
-
-        <Select
-          label="Order Status"
-          name="orderStatus"
-          value={filters.orderStatus}
-          onChange={update}
-          options={[
-            "pending",
-            "accepted",
-            "in-transit",
-            "delivered",
-          ]}
-        />
-
-        <Select
-          label="Payment Status"
-          name="paymentStatus"
-          value={filters.paymentStatus}
-          onChange={update}
-          options={["pending", "paid", "failed"]}
-        />
-
-        <Select
-          label="Method"
-          name="deliveryMethod"
-          value={filters.deliveryMethod}
-          onChange={update}
-          options={["delivery", "drone"]}
-        />
-      </div>
-
-      <div className="text-right mt-3">
-        <button
-          onClick={clear}
-          className="px-4 py-2 text-sm rounded bg-gray-100 border hover:bg-gray-200"
-        >
-          Clear Filters
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Select({ label, name, value, onChange, options }) {
-  return (
-    <div>
-      <label className="block mb-1 text-sm text-gray-600">{label}</label>
-      <select
-        name={name}
-        value={value}
-        onChange={onChange}
-        className="w-full border px-2 py-2 rounded-lg bg-white"
-      >
-        <option value="">All</option>
-        {options.map((o) =>
-          typeof o === "string" ? (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ) : (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          )
+        {/* Accounts Tab */}
+        {activeTab === "accounts" && (
+          <>
+            <AccountsView
+              customers={customers}
+              loading={loadingCustomers}
+              onDelete={handleDeleteCustomer}
+              onLock={handleLockCustomer}
+            />
+            <RestaurantsView
+              restaurants={restaurants}
+              loading={loadingRestaurants}
+              onDelete={handleDeleteRestaurant}
+              onLock={handleLockRestaurant}
+            />
+          </>
         )}
-      </select>
+      </div>
     </div>
   );
 }
 
-function OrderTable({ orders, restaurantMap }) {
-  return (
-    <div className="bg-white shadow rounded-xl p-6 border">
-      <h2 className="text-xl font-semibold mb-4 text-green-700">
-        All Orders
-      </h2>
+/* --- Stats View Component --- */
+function StatsView({ stats }) {
+  const {
+    totalOrders,
+    totalRevenue,
+    restaurantAgg: restaurantBreakdown,
+    deliveryAgg: deliveryBreakdown,
+    customerAgg: customerBreakdown,
+  } = stats;
 
-      <div className="overflow-x-auto">
+  return (
+    <>
+      <div className="container mx-auto">
+
+      {/* Summary cards */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+        <div className="card">
+          <div className="text-sm text-gray-400">Total Orders</div>
+          <div className="text-2xl font-bold mt-2">{totalOrders}</div>
+        </div>
+        <div className="card">
+          <div className="text-sm text-gray-400">Total Revenue</div>
+          <div className="text-2xl font-bold mt-2">{formatCurrency(totalRevenue)}</div>
+        </div>
+      </section>
+
+      {/* Restaurant Breakdown */}
+      <BreakdownTable
+        title="📦 By Restaurant"
+        data={restaurantBreakdown}
+        columns={[
+          { key: "restaurantName", label: "Restaurant" },
+          { key: "orders", label: "Orders" },
+          { key: "revenue", label: "Revenue" },
+          { key: "shares.restaurant", label: "Restaurant Share" },
+          { key: "shares.delivery", label: "Delivery Share" },
+          { key: "shares.platform", label: "Platform Share" },
+        ]}
+      />
+
+      {/* Delivery Breakdown */}
+      <BreakdownTable
+        title="🚚 By Delivery"
+        data={deliveryBreakdown}
+        columns={[
+          { key: "deliveryName", label: "DeliveryId" },
+          { key: "orders", label: "Orders" },
+          { key: "revenue", label: "Revenue" },
+          { key: "shares.restaurant", label: "Restaurant Share" },
+          { key: "shares.delivery", label: "Delivery Share" },
+          { key: "shares.platform", label: "Platform Share" },
+        ]}
+      />
+
+      {/* Customer Breakdown */}
+      <BreakdownTable
+        title="🧍‍♂️ By Customer"
+        data={customerBreakdown}
+        columns={[
+          { key: "customerName", label: "CustomerId" },
+          { key: "email", label: "Email" },
+          { key: "orders", label: "Orders" },
+          { key: "totalSpent", label: "Total Spent" },
+        ]}
+      />
+      </div>
+    </>
+  );
+}
+
+/* --- Accounts View Component --- */
+function AccountsView({ customers, loading, onDelete, onLock }) {
+  if (loading) {
+    return <div className="text-white text-lg">Đang tải danh sách khách hàng...</div>;
+  }
+
+  return (
+    <section>
+      <h2 className="text-2xl font-semibold mb-3 orders-subtitle">👥 Danh sách khách hàng</h2>
+      <div className="overflow-x-auto card">
         <table className="min-w-full text-sm">
-          <thead className="bg-green-600 text-white">
+          <thead className="bg-gray-900 text-gray-300">
             <tr>
-              <Th>Order ID</Th>
-              <Th>Customer</Th>
-              <Th>Restaurant</Th>
-              <Th>Total</Th>
-              <Th>Status</Th>
-              <Th>Payment</Th>
-              <Th>Method</Th>
+              <th className="px-4 py-2 font-semibold border-b border-gray-800 text-left">Username</th>
+              <th className="px-4 py-2 font-semibold border-b border-gray-800 text-left">Tổng đơn hàng</th>
+              <th className="px-4 py-2 font-semibold border-b border-gray-800 text-left">Trạng thái</th>
+              <th className="px-4 py-2 font-semibold border-b border-gray-800 text-left">Hành động</th>
             </tr>
           </thead>
-
           <tbody>
-            {orders.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="py-4 text-center text-gray-500"
-                >
-                  No orders found.
-                </td>
-              </tr>
-            ) : (
-              orders.map((o) => (
-                <tr
-                  key={o._id}
-                  className="border-t hover:bg-gray-50 transition"
-                >
-                  <Td>{o._id}</Td>
-                  <Td>{o.customerEmail}</Td>
-                  <Td>{restaurantMap[o.restaurantId] || o.restaurantId}</Td>
-                  <Td>{formatCurrency(o.totalAmount)}</Td>
-                  <Td>{badge(o.orderStatus)}</Td>
-                  <Td>{badge(o.paymentStatus)}</Td>
-                  <Td>{o.deliveryMethod}</Td>
+            {customers && customers.length > 0 ? (
+              customers.map((customer, i) => (
+                <tr key={customer._id} className={i % 2 === 0 ? "bg-gray-900" : "bg-gray-800"}>
+                  <td className="px-4 py-2 border-b border-gray-800 text-gray-200">
+                    {customer.username}
+                  </td>
+                  <td className="px-4 py-2 border-b border-gray-800 text-gray-200">
+                    {customer.orderCount || 0}
+                  </td>
+                  <td className="px-4 py-2 border-b border-gray-800 text-gray-200">
+                    {customer.isLocked ? "🔒 Đã khóa" : "🔓 Hoạt động"}
+                  </td>
+                  <td className="px-4 py-2 border-b border-gray-800 space-x-2">
+                    <button
+                      onClick={() => onLock(customer._id, customer.username, customer.isLocked)}
+                      className={`${
+                        customer.isLocked
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "bg-yellow-600 hover:bg-yellow-700"
+                      } text-white px-3 py-1 rounded transition-colors`}
+                    >
+                      {customer.isLocked ? "🔓 Mở khóa" : "🔒 Khóa"}
+                    </button>
+                    <button
+                      onClick={() => onDelete(customer._id, customer.username)}
+                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded transition-colors"
+                    >
+                      🗑️ Xóa
+                    </button>
+                  </td>
                 </tr>
               ))
+            ) : (
+              <tr>
+                <td colSpan={4} className="text-center py-4 text-gray-500">
+                  Không có khách hàng nào
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   );
 }
 
-function Th({ children }) {
-  return <th className="px-3 py-2 text-left">{children}</th>;
-}
-
-function Td({ children }) {
-  return <td className="px-3 py-2">{children}</td>;
-}
-
-function badge(value) {
-  const colors = {
-    delivered: "bg-green-100 text-green-700",
-    paid: "bg-green-100 text-green-700",
-    accepted: "bg-yellow-100 text-yellow-700",
-    "in-transit": "bg-blue-100 text-blue-700",
-    pending: "bg-gray-200 text-gray-700",
-    failed: "bg-red-100 text-red-700",
-  };
+/* --- Restaurants View Component --- */
+function RestaurantsView({ restaurants, loading, onDelete, onLock }) {
+  if (loading) {
+    return <div className="text-white text-lg mt-6">Đang tải danh sách nhà hàng...</div>;
+  }
 
   return (
-    <span
-      className={`px-2 py-1 rounded text-xs font-medium ${
-        colors[value] || "bg-gray-200 text-gray-700"
-      }`}
-    >
-      {value}
-    </span>
+    <section className="mt-8">
+      <h2 className="text-2xl font-semibold mb-3 orders-subtitle">🏪 Danh sách nhà hàng</h2>
+      <div className="overflow-x-auto card">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-900 text-gray-300">
+            <tr>
+              <th className="px-4 py-2 font-semibold border-b border-gray-800 text-left">
+                Tên nhà hàng
+              </th>
+              <th className="px-4 py-2 font-semibold border-b border-gray-800 text-left">
+                Owner ID
+              </th>
+              <th className="px-4 py-2 font-semibold border-b border-gray-800 text-left">
+                Tổng đơn hàng
+              </th>
+              <th className="px-4 py-2 font-semibold border-b border-gray-800 text-left">
+                Trạng thái tài khoản
+              </th>
+              <th className="px-4 py-2 font-semibold border-b border-gray-800 text-left">
+                Hành động
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {restaurants && restaurants.length > 0 ? (
+              restaurants.map((restaurant, i) => (
+                <tr key={restaurant._id} className={i % 2 === 0 ? "bg-gray-900" : "bg-gray-800"}>
+                  <td className="px-4 py-2 border-b border-gray-800 text-gray-200">
+                    {restaurant.name}
+                  </td>
+                  <td className="px-4 py-2 border-b border-gray-800 text-gray-200">
+                    {restaurant.ownerId}
+                  </td>
+                  <td className="px-4 py-2 border-b border-gray-800 text-gray-200">
+                    {restaurant.orderCount || 0}
+                  </td>
+                  <td className="px-4 py-2 border-b border-gray-800 text-gray-200">
+                    {restaurant.isLocked ? "🔒 Đã khóa" : "🔓 Hoạt động"}
+                  </td>
+                  <td className="px-4 py-2 border-b border-gray-800 space-x-2">
+                    <button
+                      onClick={() => onLock(restaurant._id, restaurant.name, restaurant.isLocked)}
+                      className={`${
+                        restaurant.isLocked
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "bg-yellow-600 hover:bg-yellow-700"
+                      } text-white px-3 py-1 rounded transition-colors`}
+                    >
+                      {restaurant.isLocked ? "🔓 Mở khóa" : "🔒 Khóa"}
+                    </button>
+                    <button
+                      onClick={() => onDelete(restaurant._id, restaurant.name)}
+                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded transition-colors"
+                    >
+                      🗑️ Xóa
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5} className="text-center py-4 text-gray-500">
+                  Chưa có nhà hàng nào
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
+}
+
+/* --- Components --- */
+
+function BreakdownTable({ title, data = [], columns = [] }) {
+  return (
+    <section>
+      <h2 className="text-2xl font-semibold mb-3 orders-subtitle">{title}</h2>
+      <div className="overflow-x-auto card">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-900 text-gray-300">
+            <tr>
+              {columns.map((col) => (
+                <th
+                  key={col.key}
+                  className="px-4 py-2 font-semibold border-b border-gray-800 text-left"
+                >
+                  {col.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data && data.length > 0 ? (
+              data.map((item, i) => (
+                <tr key={i} className={i % 2 === 0 ? "bg-gray-900" : "bg-gray-800"}>
+                  {columns.map((col) => (
+                    <td
+                      key={col.key}
+                      className="px-4 py-2 border-b border-gray-800 text-gray-200"
+                    >
+                      {getNestedValue(item, col.key)}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="text-center py-4 text-gray-500"
+                >
+                  No data available
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+/* --- Helper functions --- */
+
+function getNestedValue(obj, keyPath) {
+  return keyPath.split(".").reduce((acc, key) => acc && acc[key], obj) || "-";
 }
 
 function formatCurrency(n) {
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(Number(n) || 0);
+  try {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(Number(n) || 0);
+  } catch {
+    return `${n}`;
+  }
 }
