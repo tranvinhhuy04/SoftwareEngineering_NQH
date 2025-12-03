@@ -15,6 +15,7 @@ import OrderDetail from "./pages/OrderDetail";
 import DeliveryAdminPanel from "./pages/DeliveryAdminPanel";
 import AllOrders from "./pages/AllOrders";
 import RestaurantOrders from "./pages/restaurant/RestaurantOrders";
+import EditCategory from "./pages/restaurant/EditCategory";
 import HomeAll from "./pages/HomeAll";
 import Profile from "./pages/Profile";
 import ProtectedLayout from "./component/protectedLayout";
@@ -42,6 +43,7 @@ const App = () => {
             <Route path="/orders/:id" element={<OrderDetail />} />
           </Route>
           <Route element={<ProtectedLayout allowedRoles={["restaurant"]} />}>
+            <Route path="/restaurant/menu/categories/edit/:id" element={<EditCategory />} />
             <Route path="/restaurant/profile" element={<RestaurantProfile />} />
             <Route path="/restaurant/menu/add" element={<MenuManagement />} />
             <Route path="/restaurant/menu" element={<MenuItemsList />} />
