@@ -1,77 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import '../styles/theme.css';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 
-const DeliveryAdminPanel = () => {
+const formatVND = (value) => {
+  if (!value) return "0 ₫";
+  return value.toLocaleString("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  });
+};
+
+const AllOrders = () => {
   const [orders, setOrders] = useState([]);
+  const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [deliveryPerson, setDeliveryPerson] = useState(null);
+  const [error, setError] = useState("");
 
-  // Decode JWT to get delivery person info
-  const decodeToken = (token) => {
-    try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      );
-      return JSON.parse(jsonPayload);
-    } catch (err) {
-      console.error('Error decoding token:', err);
-      return null;
-    }
-  };
-
-  useEffect(() => {
-    // Get delivery person info from token
-    const token = localStorage.getItem('token');
-    if (token) {
-      const decoded = decodeToken(token);
-      if (decoded) {
-        setDeliveryPerson(decoded);
-      }
-    }
-  }, []);
-
+  /* ============================================================
+     FETCH ORDERS READY FOR DELIVERY
+  ============================================================ */
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:8000/delivery/orders', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        console.log('Fetched orders:', response.data);
-        // Debug: Check if location data exists
-        if (response.data.length > 0) {
-          console.log('First order details:', response.data[0]);
-          console.log('Location data available?', !!response.data[0].location);
-        }
-        
-        // Option 1: Use the data as is (if backend is properly sending location)
-        setOrders(response.data);
-        
-        // Option 2: Uncomment to add dummy location data for testing
-        /*
-        const ordersWithLocation = response.data.map(order => ({
-          ...order,
-          location: order.location || {
-            address: "123 Test Street, City, Country",
-            coordinates: {
-              lat: 37.7749,
-              lng: -122.4194
-            }
-          }
-        }));
-        setOrders(ordersWithLocation);
-        */
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          "http://localhost:8000/delivery/orders",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        console.log("Fetched orders:", response.data);
+
+        setOrders(
+          Array.isArray(response.data.orders)
+            ? response.data.orders
+            : []
+        );
       } catch (err) {
-        console.error('Error fetching orders:', err.message);
-        setError('Failed to fetch delivery orders');
+        console.error("Error fetching orders:", err.message);
+        setError("Failed to fetch delivery orders");
       } finally {
         setLoading(false);
       }
@@ -80,178 +45,234 @@ const DeliveryAdminPanel = () => {
     fetchOrders();
   }, []);
 
+  /* ============================================================
+     FETCH RESTAURANTS (FOR NAME + ADDRESS)
+  ============================================================ */
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(
+          "http://localhost:8000/restaurant/getAllRestaurant",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        setRestaurants(res.data || []);
+      } catch (err) {
+        console.error("Failed to load restaurants", err);
+      }
+    };
+
+    fetchRestaurants();
+  }, []);
+
+  const getRestaurant = (id) => restaurants.find((r) => r._id === id);
+
+  /* ============================================================
+     CLAIM ORDER (accepted → in-transit)
+  ============================================================ */
   const handleClaimOrder = async (orderId) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await axios.patch(
         `http://localhost:8000/delivery/order/${orderId}`,
-        { status: 'in-transit' },
+        { status: "in-transit" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      console.log('Claim order response:', response.data);
 
-      setOrders(orders.map(order =>
-        order._id === orderId ? { ...order, status: 'in-transit', deliveryPersonId: response.data.order?.deliveryPersonId || 'assigned', deliveryPersonName: response.data.order?.deliveryPersonName } : order
-      ));
-      setError('');
+      console.log("Claim response:", response.data);
+
+      setOrders(
+        orders.map((o) =>
+          o._id === orderId
+            ? {
+                ...o,
+                orderStatus: "in-transit",
+                deliveryPersonName: response.data.order?.deliveryPersonName,
+                deliveryPersonId: response.data.order?.deliveryPersonId,
+              }
+            : o
+        )
+      );
+
+      setError("");
     } catch (err) {
-      console.error('Error claiming order:', err.message);
-      setError('Failed to claim order');
+      console.error("Error claiming:", err.message);
+      setError("Failed to claim order");
     }
   };
 
+  /* ============================================================
+     UPDATE STATUS (in-transit → delivered)
+  ============================================================ */
   const handleStatusUpdate = async (orderId, newStatus) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await axios.patch(
         `http://localhost:8000/delivery/order/${orderId}`,
-        { status: newStatus },
+        { orderStatus: newStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      console.log('Status update response:', response.data);
 
-      setOrders(orders.map(order =>
-        order._id === orderId ? { ...order, status: newStatus } : order
-      ));
-      setError('');
+      console.log("Status update:", response.data);
+
+      setOrders(
+        orders.map((o) =>
+          o._id === orderId ? { ...o, orderStatus: newStatus } : o
+        )
+      );
+
+      setError("");
     } catch (err) {
-      console.error('Error updating status:', err.message);
-      setError('Failed to update order status');
+      console.error("Error updating status:", err.message);
+      setError("Failed to update order status");
     }
   };
 
   const getStatusBadgeClass = (status) => {
     switch (status) {
-      case 'pending':
-        return 'bg-blue-600 text-white';
-      case 'accepted':
-        return 'bg-yellow-500 text-black';
-      case 'in-transit':
-        return 'bg-purple-600 text-white';
-      case 'delivered':
-        return 'bg-green-600 text-white';
+      case "pending":
+        return "bg-blue-600 text-white";
+      case "accepted":
+        return "bg-yellow-500 text-black";
+      case "in-transit":
+        return "bg-purple-600 text-white";
+      case "delivered":
+        return "bg-green-600 text-white";
       default:
-        return 'bg-gray-600 text-white';
+        return "bg-gray-600 text-white";
     }
   };
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    }).format(date);
+    if (!dateString) return "";
+    return new Intl.DateTimeFormat("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(dateString));
   };
 
-  
-
   return (
-    <div className="app-root py-8">
-      <div className="container mx-auto">
-        <h1 className="orders-title">Delivery Admin Panel</h1>
+    <div className="py-8">
+      <h1 className="text-3xl font-bold mb-8">Delivery Admin Panel</h1>
 
       {error && (
-        <div className="bg-red-500 text-white p-3 rounded mb-4">
-          {error}
-        </div>
+        <div className="bg-red-500 text-white p-3 rounded mb-4">{error}</div>
       )}
 
       {loading ? (
         <div className="text-center py-8">
-          <div className="w-12 h-12 rounded-full border-4 border-green-500 border-t-transparent animate-spin mx-auto"></div>
+          <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent animate-spin mx-auto rounded-full"></div>
           <p className="mt-4 text-gray-400">Loading orders...</p>
         </div>
       ) : orders.length === 0 ? (
-        <div className="bg-gray-900 rounded-lg p-8 text-center">
-          <p className="text-xl">No available or assigned orders.</p>
+        <div className="bg-gray-900 p-8 rounded text-center text-xl">
+          No available or assigned orders.
         </div>
       ) : (
         <div className="space-y-6">
-          {orders.map(order => (
-            <div key={order._id} className="bg-gray-900 rounded-lg shadow-lg overflow-hidden">
-              <div className="p-6">
-                {/* Debug information - uncomment if needed */}
-                {/*
-                <div className="bg-red-800 p-2 mb-4 text-xs">
-                  <p>Order ID: {order._id}</p>
-                  <p>Has location object: {order.location ? "Yes" : "No"}</p>
-                  <p>Location data: {JSON.stringify(order.location)}</p>
-                </div>
-                */}
-                
+          {orders.map((order) => {
+            const restaurant = getRestaurant(order.restaurantId);
+
+            return (
+              <div
+                key={order._id}
+                className="bg-gray-900 rounded-lg shadow-lg p-6"
+              >
+                {/* HEADER */}
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="font-bold text-lg">Order #{order._id.substring(order._id.length - 6)}</h3>
-                    {order.createdAt && (
+                    <h3 className="text-lg font-bold">
+                      Order #{order._id?.slice(-6)}
+                    </h3>
+
+                    <p className="text-gray-400 text-sm">
+                      {formatDate(order.createdAt)}
+                    </p>
+
+                    <p className="text-gray-400 text-sm">
+                      Status: {order.orderStatus}
+                    </p>
+
+                    {order.deliveryPersonName && (
                       <p className="text-gray-400 text-sm">
-                        {formatDate(order.createdAt)}
+                        Assigned to: {order.deliveryPersonName}
                       </p>
                     )}
-                    <p className="text-gray-400 text-sm">
-                      Status: {order.status || 'Unknown'}
-                    </p>
-                    {order.deliveryPersonId ? (
-                      <p className="text-gray-400 text-sm">Assigned to: {deliveryPerson?.username || deliveryPerson?.email || 'Delivery Person'}</p>
-                    ) : null}
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeClass(order.status)}`}>
-                    {order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : 'Unknown'}
+
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeClass(
+                      order.orderStatus
+                    )}`}
+                  >
+                    {order.orderStatus}
                   </span>
                 </div>
 
-                {/* Delivery location intentionally hidden when not provided */}
+                {/* RESTAURANT INFO */}
+                <div className="mb-4 text-gray-300 text-sm">
+                  <p className="font-semibold">Restaurant:</p>
 
-                <div className="space-y-2 mb-4">
-                  <h4 className="font-medium text-green-500 mb-2">Order Items</h4>
-                  {order.items && order.items.length > 0 ? (
-                    order.items.map((item, index) => (
-                      <div key={index} className="flex justify-between py-1 border-b border-gray-800">
-                        <span>{item.quantity}x {item.name}</span>
-                        <span>${(item.price * item.quantity).toFixed(2)}</span>
-                      </div>
-                    ))
+                  {restaurant ? (
+                    <>
+                      🍽 <strong>{restaurant.name}</strong>
+                      <br />
+                      📍 {restaurant.address}
+                    </>
                   ) : (
-                    <p className="text-gray-400">No items available</p>
+                    <>Unknown restaurant</>
                   )}
                 </div>
 
-                <div className="border-t border-gray-800 pt-4 flex flex-col sm:flex-row justify-between items-center">
-                  <div className="space-x-2 mb-4 sm:mb-0 w-full sm:w-auto">
-                    {order.status === 'accepted' && !order.deliveryPersonId ? (
+                {/* DELIVERY LOCATION */}
+                <div className="mb-4 text-gray-300 text-sm">
+                  <p className="font-semibold">Delivery Location:</p>
+                  <p>📍 {order.deliveryLocation?.address}</p>
+                  <p>
+                    ({order.deliveryLocation?.latitude?.toFixed(4)},{" "}
+                    {order.deliveryLocation?.longitude?.toFixed(4)})
+                  </p>
+                </div>
+
+                {/* ACTIONS + TOTAL */}
+                <div className="border-t border-gray-700 pt-4 flex justify-between items-center">
+                  <div>
+                    {order.orderStatus === "accepted" &&
+                    !order.deliveryPersonId ? (
                       <button
                         onClick={() => handleClaimOrder(order._id)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full sm:w-auto"
+                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                       >
                         Claim Order
                       </button>
-                    ) : order.status === 'accepted' ? (
-                      <p className="text-gray-400 text-sm">Order already assigned</p>
-                    ) : null}
-
-                    {order.status === 'in-transit' ? (
+                    ) : order.orderStatus === "in-transit" ? (
                       <button
-                        onClick={() => handleStatusUpdate(order._id, 'delivered')}
-                        className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full sm:w-auto"
+                        onClick={() =>
+                          handleStatusUpdate(order._id, "delivered")
+                        }
+                        className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
                       >
                         Mark as Delivered
                       </button>
-                    ) : order.status !== 'accepted' && order.status !== 'in-transit' ? (
-                      <p className="text-gray-400 text-sm">No actions available</p>
-                    ) : null}
+                    ) : (
+                      <p className="text-gray-400 text-sm">
+                        No actions available
+                      </p>
+                    )}
                   </div>
-                  <div className="font-bold">
-                    <span>Total: </span>
-                    <span className="price">${order.total ? order.total.toFixed(2) : '0.00'}</span>
+
+                  <div className="font-bold text-yellow-500">
+                    {formatVND(order.totalAmount)}
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
-      </div>
     </div>
   );
 };
 
-export default DeliveryAdminPanel;
+export default AllOrders;
