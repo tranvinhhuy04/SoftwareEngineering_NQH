@@ -9,106 +9,123 @@ const AUTH_SERVICE_URL =
 const RESTAURANT_SERVICE_URL =
   process.env.RESTAURANT_SERVICE_URL || "http://restaurant-service:5002";
 
-// Create axios instance with timeout for internal calls to avoid long hangs
 const http = axios.create({ timeout: 3000 });
 
-/**
- * GET /admin/stats
- * Hiển thị thống kê tổng quan cho admin:
- * - Tổng đơn, tổng doanh thu
- * - Breakdown theo restaurant, delivery, customer
- * - Doanh thu chia tỉ lệ (80/15/5)
- */
-// ✅ Admin thống kê tổng hợp
+
+/* ============================================================
+   📦 GET ALL ORDERS FOR ADMIN (FULL LIST, NO FILTER)
+============================================================ */
+router.get("/all", verifyToken, allowRoles("admin"), async (req, res) => {
+  try {
+    const orders = await Order.find().sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (err) {
+    console.error("❌ Failed to fetch orders:", err);
+    res.status(500).json({ message: "Failed to fetch orders" });
+  }
+});
+
+/* ============================================================
+   📊 ADMIN DASHBOARD – FULL STATISTICS (MATCH SCHEMA 100%)
+============================================================ */
+/* ============================================================
+   📊 ADMIN DASHBOARD – FULL STATISTICS (ALL ORDERS, NO FILTER)
+============================================================ */
 router.get("/stats", verifyToken, allowRoles("admin"), async (req, res) => {
   try {
-    // ⛳ 1) Chỉ tính đơn hàng đã giao thành công
-    const deliveredFilter = { status: "delivered" };
+    // 👉 Đếm toàn bộ đơn không lọc trạng thái
+    const totalOrders = await Order.countDocuments({});
 
-    // Tổng số đơn delivered
-    const totalOrders = await Order.countDocuments(deliveredFilter);
-
-    // Tổng doanh thu delivered
+    // 👉 Tổng doanh thu (tất cả orders)
     const totalRevenueAgg = await Order.aggregate([
-      { $match: deliveredFilter },               // ⭐ thêm match
-      { $group: { _id: null, total: { $sum: "$total" } } },
+      { $match: {} },
+      { $group: { _id: null, total: { $sum: "$totalAmount" } } },
     ]);
     const totalRevenue = totalRevenueAgg[0]?.total || 0;
 
-    // Báo cáo theo nhà hàng — chỉ delivered
+    // 👉 Breakdown theo restaurant
     const restaurantAgg = await Order.aggregate([
-      { $match: deliveredFilter },               // ⭐ thêm match
+      { $match: {} },
       {
         $group: {
           _id: "$restaurantId",
           orders: { $sum: 1 },
-          revenue: { $sum: "$total" },
+          revenue: { $sum: "$totalAmount" },
         },
       },
     ]);
 
-    // Báo cáo theo tài xế — chỉ delivered
+    // 👉 Breakdown theo shipper
     const deliveryAgg = await Order.aggregate([
-      { $match: deliveredFilter },               // ⭐ thêm match
+      { $match: {} },
       {
         $group: {
-          _id: "$deliveryPersonId",
+          _id: "$deliveryPersonEmail",
           orders: { $sum: 1 },
-          revenue: { $sum: "$total" },
+          revenue: { $sum: "$totalAmount" },
         },
       },
     ]);
 
-    // Báo cáo theo khách hàng — chỉ delivered
+    // 👉 Breakdown theo customer
     const customerAgg = await Order.aggregate([
-      { $match: deliveredFilter },               // ⭐ thêm match
+      { $match: {} },
       {
         $group: {
-          _id: "$customerId",
+          _id: "$customerEmail",
           orders: { $sum: 1 },
-          totalSpent: { $sum: "$total" },
+          totalSpent: { $sum: "$totalAmount" },
         },
       },
     ]);
 
-    /* ---- GIỮ NGUYÊN PHẦN FETCH RESTAURANT + USER INFO ---- */
-
+    /* --------------------------------------------------------
+       Fetch restaurant names
+    -------------------------------------------------------- */
     let restaurantNames = {};
     try {
       const resp = await http.get(`${RESTAURANT_SERVICE_URL}/api/restaurants`);
       if (Array.isArray(resp.data)) {
         resp.data.forEach((r) => {
-          restaurantNames[r._id || r._id?.toString()] =
-            r.name || r.restaurantName || r.name;
+          restaurantNames[r._id?.toString()] = r.name || "Restaurant";
         });
       }
     } catch (e) {
-      console.warn("Warning: failed to fetch restaurant names:", e.message);
+      console.warn("⚠ Failed to fetch restaurant names:", e.message);
     }
 
-    async function getUserNames(ids) {
-      if (!ids.length) return {};
+    /* --------------------------------------------------------
+       Fetch user info using email
+    -------------------------------------------------------- */
+    async function getUserInfo(emails) {
+      if (!emails.length) return {};
+
       try {
         const resp = await http.post(
-          `${AUTH_SERVICE_URL}/admin/users/bulk-info`,
-          { ids }
+          `${AUTH_SERVICE_URL}/admin/users/bulk-info-email`,
+          { emails }
         );
+
         const map = {};
         resp.data.forEach((u) => {
-          map[u._id] = u;
+          map[u.email] = u;
         });
         return map;
-      } catch (e) {
+      } catch {
         return {};
       }
     }
 
-    const deliveryIds = deliveryAgg.map((d) => d._id).filter(Boolean);
-    const customerIds = customerAgg.map((c) => c._id).filter(Boolean);
-    const deliveryUsers = await getUserNames(deliveryIds);
-    const customerUsers = await getUserNames(customerIds);
+    const deliveryEmails = deliveryAgg.map((d) => d._id).filter(Boolean);
+    const customerEmails = customerAgg.map((c) => c._id).filter(Boolean);
 
-    // Giữ nguyên logic chia shares
+    const deliveryUsers = await getUserInfo(deliveryEmails);
+    const customerUsers = await getUserInfo(customerEmails);
+
+    /* --------------------------------------------------------
+       Revenue share function
+    -------------------------------------------------------- */
     function calcShares(total) {
       return {
         restaurant: Math.round(total * 0.8),
@@ -117,32 +134,36 @@ router.get("/stats", verifyToken, allowRoles("admin"), async (req, res) => {
       };
     }
 
+    /* --------------------------------------------------------
+       Format responses
+    -------------------------------------------------------- */
     const restaurantBreakdown = restaurantAgg.map((r) => ({
+      restaurantId: r._id,
       restaurantName: restaurantNames[r._id] || r._id,
       orders: r.orders,
       revenue: r.revenue,
       shares: calcShares(r.revenue),
     }));
 
-    const deliveryBreakdown = deliveryAgg.map((d) => {
-      const idKey = d._id || "unassigned";
-      return {
-        deliveryId: idKey,
-        deliveryName:
-          deliveryUsers[d._id]?.name || (d._id ? d._id : "Unassigned"),
-        orders: d.orders,
-        revenue: d.revenue,
-        shares: calcShares(d.revenue),
-      };
-    });
+    const deliveryBreakdown = deliveryAgg.map((d) => ({
+      deliveryEmail: d._id,
+      deliveryName: deliveryUsers[d._id]?.name || d._id,
+      orders: d.orders,
+      revenue: d.revenue,
+      shares: calcShares(d.revenue),
+    }));
 
     const customerBreakdown = customerAgg.map((c) => ({
-      customerName: c._id,
-      email: customerUsers[c._id]?.username || "-",
+      customerEmail: c._id,
+      customerName: customerUsers[c._id]?.name || "-",
+      email: c._id,
       orders: c.orders,
       totalSpent: c.totalSpent,
     }));
 
+    /* --------------------------------------------------------
+       FINAL RESPONSE
+    -------------------------------------------------------- */
     res.json({
       totalOrders,
       totalRevenue,
@@ -151,9 +172,10 @@ router.get("/stats", verifyToken, allowRoles("admin"), async (req, res) => {
       customerAgg: customerBreakdown,
     });
   } catch (err) {
-    console.error("Error fetching admin stats:", err.message);
+    console.error("❌ Admin stats error:", err.message);
     res.status(500).json({ message: "Failed to fetch admin stats" });
   }
 });
+
 
 module.exports = router;
