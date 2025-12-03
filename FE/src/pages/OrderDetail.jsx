@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 
+
 const OrderDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ const OrderDetail = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [restaurants, setRestaurants] = useState([]);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -32,6 +34,24 @@ const OrderDetail = () => {
 
     fetchOrderDetails();
   }, [id]);
+
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(
+          "http://localhost:8000/restaurant/getAllRestaurant",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setRestaurants(res.data || []);
+      } catch (err) {
+        console.error("Failed to load restaurants", err);
+      }
+    };
+
+    fetchRestaurants();
+  }, []);
+
 
   const getStatusClass = (status) => {
     const base =
@@ -112,7 +132,7 @@ const OrderDetail = () => {
           <span className={getStatusClass(order?.orderStatus)}>
             {order?.orderStatus
               ? order.orderStatus.charAt(0).toUpperCase() +
-                order.orderStatus.slice(1)
+              order.orderStatus.slice(1)
               : "Unknown"}
           </span>
         </div>
@@ -134,14 +154,21 @@ const OrderDetail = () => {
           </div>
 
           {/* RESTAURANT LOCATION */}
-          <div>
-            <h4 className="font-semibold text-gray-800 mb-2">Restaurant:</h4>
-            <div className="bg-gray-50 p-4 rounded-xl text-gray-700 text-sm">
-              🍽 {order?.restaurantLocation?.address || "No restaurant address"}
-            </div>
-          </div>
-        </div>
+          {(() => {
+            const restaurant = restaurants?.find(r => r._id === order?.restaurantId);
 
+            return (
+              <div>
+                <h4 className="font-semibold text-gray-800 mb-2">Restaurant:</h4>
+                <div className="bg-gray-50 p-4 rounded-xl text-gray-700 text-sm">
+                  🍽 {restaurant?.address || "No restaurant address"}
+                </div>
+              </div>
+            );
+
+          })()}
+
+        </div>
         {/* ITEMS */}
         <div className="mt-10">
           <h3 className="text-xl font-semibold mb-3">Items Ordered</h3>
@@ -153,11 +180,11 @@ const OrderDetail = () => {
                 className="flex justify-between items-center bg-gray-50 p-3 rounded-xl"
               >
                 <div className="text-gray-800 font-medium">
-                  {item.quantity}x {item.menuId}
+                  {item.quantity}x {item.name}
                 </div>
 
                 <div className="text-green-600 font-bold">
-                  ${(item.subtotal / 1000).toFixed(3)}
+                 {item.subtotal.toLocaleString("vi-VN")} ₫
                 </div>
               </div>
             ))}
@@ -168,7 +195,7 @@ const OrderDetail = () => {
         <div className="mt-10 flex justify-between items-center text-2xl">
           <span className="font-semibold text-gray-700">Total:</span>
           <span className="text-green-600 font-extrabold">
-            ${(order?.totalAmount / 1000).toFixed(3)}
+            {order?.totalAmount.toLocaleString("vi-VN")} ₫
           </span>
         </div>
 

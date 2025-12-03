@@ -24,6 +24,14 @@ const HomeAll = () => {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
+  const formatVND = (value) => {
+  if (!value) return "0 ₫";
+  return value.toLocaleString("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  });
+};
+
   // ========================= CHECK LOGIN =========================
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -155,7 +163,7 @@ const HomeAll = () => {
             className="bg-white rounded-xl shadow hover:shadow-lg transition cursor-pointer p-4"
           >
             <img
-              src={r.imageUrl || "https://via.placeholder.com/300"}
+              src={r.avatar || "https://via.placeholder.com/300"}
               className="rounded-xl h-40 w-full object-cover"
               alt={r.name}
             />
@@ -348,7 +356,7 @@ const HomeAll = () => {
                       <p className="text-gray-400">{item.restaurantName}</p>
                       <div className="flex justify-between items-center mt-3">
                         <span className="text-lg text-green-600 font-bold">
-                          ${item.price.toFixed(2)}
+                          {formatVND(item.price)}
                         </span>
                         <button
                           className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded-xl"
@@ -399,7 +407,7 @@ const HomeAll = () => {
 
                           <div className="flex justify-between items-center mt-3">
                             <span className="text-lg text-green-600 font-bold">
-                              ${item.price.toFixed(2)}
+                              {formatVND(item.price)}
                             </span>
 
                             <button

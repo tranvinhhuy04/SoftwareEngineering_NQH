@@ -153,21 +153,33 @@ const CreateOrder = () => {
       async (pos) => {
         const { latitude, longitude } = pos.coords;
 
-        setDeliveryLocation({ latitude, longitude });
-
         try {
+          // Reverse geocoding
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
           );
           const data = await res.json();
           const realAddress = data.display_name || "Unknown location";
 
+          // Lưu cả tọa độ + address vào state
+          setDeliveryLocation({
+            latitude,
+            longitude,
+            address: realAddress,
+          });
+
           setAddress(realAddress);
         } catch (err) {
           console.error("Reverse geocoding failed:", err);
-          const fallback = `Lat: ${latitude.toFixed(
-            4
-          )}, Lng: ${longitude.toFixed(4)}`;
+
+          const fallback = `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`;
+
+          setDeliveryLocation({
+            latitude,
+            longitude,
+            address: fallback,
+          });
+
           setAddress(fallback);
         } finally {
           setLoadingLocation(false);
@@ -185,6 +197,7 @@ const CreateOrder = () => {
       }
     );
   };
+
 
   // ================= PLACE ORDER (COD + VNPAY) =================
   const handlePlaceOrder = async () => {
@@ -543,11 +556,10 @@ const CreateOrder = () => {
                   <div className="flex flex-col gap-4 mt-4">
                     {/* VNPay */}
                     <div
-                      className={`border rounded-xl p-4 w-full cursor-pointer flex items-center gap-4 transition-all ${
-                        paymentMethod === "vnpay"
+                      className={`border rounded-xl p-4 w-full cursor-pointer flex items-center gap-4 transition-all ${paymentMethod === "vnpay"
                           ? "border-blue-600 bg-blue-50"
                           : "bg-white hover:bg-gray-50"
-                      }`}
+                        }`}
                       onClick={() => setPaymentMethod("vnpay")}
                     >
                       <img
@@ -565,11 +577,10 @@ const CreateOrder = () => {
 
                     {/* COD */}
                     <div
-                      className={`border rounded-xl p-4 w-full cursor-pointer flex items-center gap-4 transition-all ${
-                        paymentMethod === "cod"
+                      className={`border rounded-xl p-4 w-full cursor-pointer flex items-center gap-4 transition-all ${paymentMethod === "cod"
                           ? "border-yellow-500 bg-yellow-50"
                           : "bg-white hover:bg-gray-50"
-                      }`}
+                        }`}
                       onClick={() => setPaymentMethod("cod")}
                     >
                       <img
@@ -598,8 +609,8 @@ const CreateOrder = () => {
                   {loading
                     ? "Processing..."
                     : paymentMethod === "cod"
-                    ? "Place Order (COD)"
-                    : "Proceed with VNPay"}
+                      ? "Place Order (COD)"
+                      : "Proceed with VNPay"}
                 </button>
 
                 {!deliveryLocation && displayedCart.length > 0 && (

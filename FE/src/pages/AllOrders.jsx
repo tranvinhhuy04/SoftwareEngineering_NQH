@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+const formatVND = (value) => {
+  if (!value) return "0 ₫";
+  return value.toLocaleString("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  });
+};
+
 const AllOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -138,7 +146,7 @@ const AllOrders = () => {
                     order.items.map((item, index) => (
                       <div key={index} className="flex justify-between">
                         <span>{item.quantity}x {item.name}</span>
-                        <span>${(item.price * item.quantity).toFixed(2)}</span>
+                        <span>{formatVND(item.price * item.quantity)}</span>
                       </div>
                     ))
                   ) : (
