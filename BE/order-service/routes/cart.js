@@ -195,5 +195,19 @@ router.delete(
     }
   }
 );
+router.get("/check-menu/:menuId", async (req, res) => {
+  try {
+    const menuId = req.params.menuId;
+
+    const exists = await Cart.findOne({
+      "items.menuId": menuId,
+    });
+
+    return res.json({ inCart: !!exists });
+  } catch (err) {
+    console.error("CART CHECK MENU ERROR:", err);
+    res.json({ inCart: false });
+  }
+});
 
 module.exports = router;

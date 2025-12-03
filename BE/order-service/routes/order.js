@@ -292,5 +292,20 @@ router.get("/delivery/orders", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch delivery orders" });
   }
 });
+/* ============================================================
+   CHECK IF MENU IS IN ANY ORDER (for Restaurant Service)
+============================================================ */
+router.get("/check-menu/:menuId", async (req, res) => {
+  try {
+    const menuId = req.params.menuId;
+
+    const exists = await OrderItem.exists({ menuId });
+
+    return res.json({ inOrder: !!exists });
+  } catch (err) {
+    console.error("ORDER CHECK MENU ERROR:", err);
+    res.json({ inOrder: false });
+  }
+});
 
 module.exports = router;

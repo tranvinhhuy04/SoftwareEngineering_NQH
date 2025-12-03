@@ -10,7 +10,11 @@ const CategorySchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  restaurantId: String
+  restaurantId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Restaurant",
+  required: true,
+}
 }, { timestamps: true });
 
 module.exports = mongoose.model("Category", CategorySchema);

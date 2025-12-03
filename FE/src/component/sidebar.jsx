@@ -85,11 +85,7 @@ const Sidebar = ({ user }) => {
         {/* Navigation */}
         <nav className="p-4 space-y-3">
 
-          {/* HOME */}
-          <Link to="/dashboard" className={linkClass("/dashboard")}>
-            <Home size={20} />
-            <span className={labelClass}>Home</span>
-          </Link>
+          
 
           {/* RESTAURANT */}
           {isRestaurant && (
@@ -119,6 +115,12 @@ const Sidebar = ({ user }) => {
           {/* CUSTOMER */}
           {isCustomer && (
             <>
+            {/* HOME */}
+              <Link to="/dashboard" className={linkClass("/dashboard")}>
+                <Home size={20} />
+                <span className={labelClass}>Home</span>
+              </Link>
+              
               <Link to="/create-order" className={linkClass("/create-order")}>
                 <ShoppingCart size={20} />
                 <span className={labelClass}>Place Order</span>
