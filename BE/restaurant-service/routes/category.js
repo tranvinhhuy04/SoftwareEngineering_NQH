@@ -103,5 +103,80 @@ router.delete(
     }
   }
 );
+/* ============================================================
+ * GET CATEGORY BY ID  (Dùng cho trang EditCategory)
+ * ============================================================ */
+router.get(
+  "/category/:id",
+  verifyToken,
+  allowRoles("restaurant"),
+  async (req, res) => {
+    try {
+      const category = await Category.findById(req.params.id);
+
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+
+      // Kiểm tra category này có thuộc restaurant của owner hay không
+      const restaurant = await Restaurant.findOne({
+        _id: category.restaurantId,
+        ownerId: req.user.id
+      });
+
+      if (!restaurant) {
+        return res.status(403).json({ message: "You do not own this category" });
+      }
+
+      res.json(category);
+    } catch (err) {
+      console.error("❌ GET CATEGORY ERROR:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+);
+/* ============================================================
+ * UPDATE CATEGORY
+ * ============================================================ */
+router.put(
+  "/category/:id",
+  verifyToken,
+  allowRoles("restaurant"),
+  async (req, res) => {
+    try {
+      const { name, description, restaurantId } = req.body;
+
+      const category = await Category.findById(req.params.id);
+      if (!category)
+        return res.status(404).json({ message: "Category not found" });
+
+      // Kiểm tra category có thuộc owner không
+      const restaurant = await Restaurant.findOne({
+        _id: category.restaurantId,
+        ownerId: req.user.id,
+      });
+
+      if (!restaurant)
+        return res.status(403).json({
+          message: "You do not own this category",
+        });
+
+      // Update
+      category.name = name;
+      category.description = description;
+      category.restaurantId = restaurantId;
+
+      await category.save();
+
+      res.json({
+        message: "Category updated successfully",
+        category,
+      });
+    } catch (err) {
+      console.error("❌ UPDATE CATEGORY ERROR:", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+);
 
 module.exports = router;
