@@ -4,14 +4,30 @@ import axios from "axios";
 import { CartContext } from "./customer/CartContext";
 import "../styles/CreateOrder.css";
 
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
+
+// ==========================
+//  PUBLISHABLE KEY STRIPE
+// ==========================
+const stripePromise = loadStripe(
+  "pk_test_51S8Mu3L5S2BtEXK03ziRNt7qohq6h48nuoVTMg0ibCjD9Oee74NsEtgjUBR4q7Xj3ResfxzKXnGWWgObYJ0CEWHy00bFbGfaXl"
+);
+
 const API_BASE = "http://localhost:8000";
 
-// ================= MAIN CREATE ORDER PAGE =================
-const CreateOrder = () => {
+function OrderContent() {
+  const navigate = useNavigate();
   const { cart, addToCart, removeFromCart, clearCart } =
     useContext(CartContext);
 
-  const navigate = useNavigate();
+  const stripe = useStripe();
+  const elements = useElements();
 
   // ================= STATES =================
   const [restaurants, setRestaurants] = useState([]);
@@ -19,22 +35,20 @@ const CreateOrder = () => {
 
   const [menuItems, setMenuItems] = useState([]);
 
-  // chỉ cần 3 field: receiver, phone_number, email
   const [billingDetails, setBillingDetails] = useState({
     receiver: "",
     phone_number: "",
     email: "",
   });
 
-  const [address, setAddress] = useState(""); // địa chỉ giao hàng
-  const [deliveryLocation, setDeliveryLocation] = useState(null); // { latitude, longitude }
+  const [address, setAddress] = useState("");
+  const [deliveryLocation, setDeliveryLocation] = useState(null);
 
   const [deliveryMethod, setDeliveryMethod] = useState("delivery");
-  const [paymentMethod, setPaymentMethod] = useState("cod"); // "cod" | "vnpay"
+  const [paymentMethod, setPaymentMethod] = useState("cod");
 
   const [loading, setLoading] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false);
-
   const [error, setError] = useState("");
 
   // ================= FETCH RESTAURANTS =================
@@ -80,7 +94,7 @@ const CreateOrder = () => {
     fetchMenu();
   }, [selectedRestaurant]);
 
-  // ================= FETCH USER (/auth/me) FOR BILLING =================
+  // ================= FETCH USER FOR BILLING =================
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -106,62 +120,56 @@ const CreateOrder = () => {
     fetchUser();
   }, []);
 
-  // ================= ADD TO CART FIXED VERSION =================
+  // ================= ADD TO CART =================
   const handleAddToCart = (item) => {
-    if (!selectedRestaurant) {
-      setError("Please select a restaurant first");
-      return;
-    }
+    if (!selectedRestaurant)
+      return setError("Please select a restaurant first");
 
     const r = restaurants.find((x) => x._id === selectedRestaurant);
 
-    const itemWithRestaurant = {
+    addToCart({
       ...item,
       restaurantId: selectedRestaurant,
       restaurantName: r ? r.name : "",
-    };
-
-    addToCart(itemWithRestaurant);
+    });
 
     const noti = document.getElementById("notification");
-    if (!noti) return;
-    noti.classList.remove("hidden");
-    noti.classList.add("flex");
-    setTimeout(() => noti.classList.add("hidden"), 1500);
+    if (noti) {
+      noti.classList.remove("hidden");
+      noti.classList.add("flex");
+      setTimeout(() => noti.classList.add("hidden"), 1500);
+    }
   };
 
-  // ================= FILTER CART =================
+  // ================= CART FILTER =================
   const displayedCart = selectedRestaurant
     ? cart.filter((i) => i.restaurantId === selectedRestaurant)
     : cart;
 
-  // ================= TOTAL =================
   const calculateTotal = () =>
-    displayedCart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    displayedCart.reduce(
+      (sum, i) => sum + i.price * i.quantity,
+      0
+    );
 
-  // ================= LOCATION (GPS + REVERSE GEOCODING) =================
+  // ================= LOCATION HANDLER =================
   const getCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setError("Geolocation not supported in this browser");
-      return;
-    }
+    if (!navigator.geolocation)
+      return setError("Geolocation not supported");
 
     setLoadingLocation(true);
-    setError("");
-
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
 
         try {
-          // Reverse geocoding
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
           );
           const data = await res.json();
+
           const realAddress = data.display_name || "Unknown location";
 
-          // Lưu cả tọa độ + address vào state
           setDeliveryLocation({
             latitude,
             longitude,
@@ -170,58 +178,32 @@ const CreateOrder = () => {
 
           setAddress(realAddress);
         } catch (err) {
-          console.error("Reverse geocoding failed:", err);
-
-          const fallback = `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`;
-
-          setDeliveryLocation({
-            latitude,
-            longitude,
-            address: fallback,
-          });
-
-          setAddress(fallback);
+          console.error(err);
         } finally {
           setLoadingLocation(false);
         }
       },
-      (err) => {
-        console.error("GPS error:", err);
+      () => {
         setError("Failed to get location");
         setLoadingLocation(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
       }
     );
   };
-
-
-  // ================= PLACE ORDER (COD + VNPAY) =================
+  // ================= PLACE ORDER (COD + STRIPE) =================
   const handlePlaceOrder = async () => {
     setError("");
 
-    if (!selectedRestaurant) {
+    if (!selectedRestaurant)
       return setError("Please select a restaurant");
-    }
 
-    if (!displayedCart.length) {
-      return setError("Your cart is empty for this restaurant");
-    }
+    if (!displayedCart.length)
+      return setError("Your cart is empty");
 
-    if (!deliveryLocation) {
+    if (!deliveryLocation)
       return setError("Please provide your delivery location");
-    }
 
-    if (!billingDetails.receiver || !billingDetails.phone_number) {
-      return setError("Please fill receiver name & phone number");
-    }
-
-    if (!billingDetails.email) {
-      return setError("Please fill email");
-    }
+    if (!billingDetails.receiver || !billingDetails.phone_number)
+      return setError("Please fill receiver info");
 
     const newOrder = {
       restaurantId: selectedRestaurant,
@@ -232,64 +214,93 @@ const CreateOrder = () => {
         quantity: i.quantity,
         restaurantId: i.restaurantId,
       })),
-      total: calculateTotal(), // giả sử VND
-      deliveryLocation, // { latitude, longitude }
+      total: calculateTotal(),
+      deliveryLocation,
       deliveryMethod,
       receiverName: billingDetails.receiver,
       phone_number: billingDetails.phone_number,
       email: billingDetails.email,
       address,
-      paymentMethod, // "cod" | "vnpay"
+      paymentMethod,
     };
 
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
 
-      // 1) Tạo Order trước
+      // 1) Tạo order trước
       const { data } = await axios.post(
         `${API_BASE}/order/orders/create`,
         newOrder,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       const createdOrder = data.order || data;
       const orderId =
         createdOrder._id || createdOrder.id || createdOrder.orderId;
 
-      if (!orderId) {
-        setError("Cannot determine created order ID");
-        return;
-      }
+      if (!orderId)
+        return setError("Cannot determine created order ID");
 
-      // 2) Nếu COD → xong tại đây
+      // ================= COD =================
       if (paymentMethod === "cod") {
         clearCart();
-        alert("Order created with COD successfully!");
-        navigate("/orders");
-        return;
+        alert("Order created with COD!");
+        return navigate("/orders");
       }
 
-      // 3) Nếu VNPay → gọi Payment Service tạo payUrl
-      const vnpAmount = Math.round(newOrder.total);
+      // ================= STRIPE =================
+      if (!stripe || !elements) {
+        return setError("Stripe is not ready yet. Please try again.");
+      }
 
-      const { data: payRes } = await axios.post(
-        `${API_BASE}/payment/vnpay/create`,
+      // Lấy thẻ từ Stripe Elements
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) {
+        return setError("Card element not found");
+      }
+
+      // 2) Gọi BE tạo PaymentIntent
+      const { data: paymentIntentRes } = await axios.post(
+        `${API_BASE}/payment/stripe/create`,
         {
           orderId,
-          amount: vnpAmount,
+          amount: calculateTotal() * 100, // USD cents
         },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // 3) Confirm payment với thẻ người dùng nhập
+      const confirmResult = await stripe.confirmCardPayment(
+        paymentIntentRes.clientSecret,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              name: billingDetails.receiver,
+              email: billingDetails.email,
+            },
+          },
         }
       );
 
-      if (payRes && payRes.payUrl) {
-        window.location.href = payRes.payUrl; // redirect sang VNPay
+      if (confirmResult.error) {
+        console.error(confirmResult.error);
+        return setError(confirmResult.error.message || "Stripe payment error");
+      }
+
+      if (confirmResult.paymentIntent.status === "succeeded") {
+        // 4) Gọi verify để update DB + publish event
+        await axios.get(
+          `${API_BASE}/payment/stripe/verify/${confirmResult.paymentIntent.id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        clearCart();
+        alert("Payment successful!");
+        return navigate("/orders");
       } else {
-        setError("Failed to create VNPay payment link");
+        return setError("Payment not completed.");
       }
     } catch (err) {
       console.error(err);
@@ -299,7 +310,7 @@ const CreateOrder = () => {
     }
   };
 
-  // ============================= UI RENDER =============================
+  // ================= UI RENDER =================
   return (
     <div className="min-h-screen bg-white text-gray-900 flex flex-col">
       {/* Notification */}
@@ -329,7 +340,9 @@ const CreateOrder = () => {
 
       {/* MAIN */}
       <main className="container mx-auto px-6 py-10">
-        <h2 className="text-4xl font-bold mb-10 text-center">Create Order</h2>
+        <h2 className="text-4xl font-bold mb-10 text-center">
+          Create Order
+        </h2>
 
         {error && (
           <div className="bg-red-100 text-red-600 px-4 py-3 rounded-lg mb-4 text-center">
@@ -337,7 +350,7 @@ const CreateOrder = () => {
           </div>
         )}
 
-        {/* CHỌN NHÀ HÀNG */}
+        {/* RESTAURANT SELECT */}
         <div className="bg-gray-50 rounded-2xl p-6 shadow mb-8">
           <h3 className="text-xl font-semibold mb-4">Choose Restaurant</h3>
           <select
@@ -354,11 +367,11 @@ const CreateOrder = () => {
           </select>
         </div>
 
-        {/* MENU + ORDER SUMMARY */}
+        {/* 3 COLUMNS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* LEFT: MENU + LOCATION + BILLING */}
+          {/* LEFT SIDE */}
           <div className="lg:col-span-2 space-y-8">
-            {/* MENU ITEMS */}
+            {/* MENU */}
             <div className="bg-gray-50 rounded-2xl p-6 shadow">
               <h3 className="text-xl font-semibold mb-4">Menu</h3>
 
@@ -366,7 +379,7 @@ const CreateOrder = () => {
                 <div className="space-y-4">
                   {menuItems.map((item) => (
                     <div
-                      key={item._id || item.menuId}
+                      key={item._id}
                       className="flex justify-between items-center border-b pb-3"
                     >
                       <div>
@@ -379,7 +392,7 @@ const CreateOrder = () => {
                       <button
                         onClick={() =>
                           handleAddToCart({
-                            menuId: item._id || item.menuId,
+                            menuId: item._id,
                             name: item.name,
                             price: item.price,
                           })
@@ -393,14 +406,16 @@ const CreateOrder = () => {
                 </div>
               ) : (
                 <p className="text-gray-500">
-                  Please select a restaurant to view menu.
+                  Select a restaurant to see menu.
                 </p>
               )}
             </div>
 
             {/* DELIVERY LOCATION */}
             <div className="bg-gray-50 rounded-2xl p-6 shadow">
-              <h3 className="text-xl font-semibold mb-4">Delivery Location</h3>
+              <h3 className="text-xl font-semibold mb-4">
+                Delivery Location
+              </h3>
 
               <div className="flex flex-col md:flex-row gap-4">
                 <input
@@ -414,7 +429,7 @@ const CreateOrder = () => {
                 <button
                   onClick={getCurrentLocation}
                   disabled={loadingLocation}
-                  className="px-5 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition disabled:bg-gray-300"
+                  className="px-5 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 disabled:bg-gray-300"
                 >
                   {loadingLocation ? "Loading..." : "Use Current Location"}
                 </button>
@@ -429,14 +444,13 @@ const CreateOrder = () => {
 
             {/* BILLING DETAILS */}
             <div className="bg-gray-50 rounded-2xl p-6 shadow">
-              <h3 className="text-xl font-semibold mb-4">Billing Details</h3>
+              <h3 className="text-xl font-semibold mb-4">
+                Billing Details
+              </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Receiver Name */}
                 <div>
-                  <label className="block mb-2 font-medium">
-                    Receiver Name
-                  </label>
+                  <label className="font-medium">Receiver Name</label>
                   <input
                     type="text"
                     value={billingDetails.receiver}
@@ -446,15 +460,12 @@ const CreateOrder = () => {
                         receiver: e.target.value,
                       }))
                     }
-                    className="w-full px-4 py-3 border rounded-xl bg-white focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-3 border rounded-xl bg-white"
                   />
                 </div>
 
-                {/* Phone Number */}
                 <div>
-                  <label className="block mb-2 font-medium">
-                    Phone Number
-                  </label>
+                  <label className="font-medium">Phone Number</label>
                   <input
                     type="text"
                     value={billingDetails.phone_number}
@@ -464,13 +475,12 @@ const CreateOrder = () => {
                         phone_number: e.target.value,
                       }))
                     }
-                    className="w-full px-4 py-3 border rounded-xl bg-white focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-3 border rounded-xl bg-white"
                   />
                 </div>
 
-                {/* Email */}
                 <div className="md:col-span-2">
-                  <label className="block mb-2 font-medium">Email</label>
+                  <label className="font-medium">Email</label>
                   <input
                     type="email"
                     value={billingDetails.email}
@@ -480,14 +490,14 @@ const CreateOrder = () => {
                         email: e.target.value,
                       }))
                     }
-                    className="w-full px-4 py-3 border rounded-xl bg-white focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-3 border rounded-xl bg-white"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* RIGHT: ORDER SUMMARY */}
+          {/* RIGHT SIDE */}
           <div className="bg-gray-50 rounded-2xl p-6 shadow">
             <h3 className="text-xl font-semibold mb-4">Your Order</h3>
 
@@ -496,13 +506,12 @@ const CreateOrder = () => {
             <select
               value={deliveryMethod}
               onChange={(e) => setDeliveryMethod(e.target.value)}
-              className="w-full px-4 py-3 border rounded-xl mt-2 mb-6 bg-white focus:ring-2 focus:ring-green-500"
+              className="w-full px-4 py-3 border rounded-xl mt-2 mb-6"
             >
               <option value="delivery">🚚 Delivery</option>
               <option value="drone">🚁 Drone Delivery</option>
             </select>
 
-            {/* CART ITEMS */}
             {displayedCart.length ? (
               <>
                 <div className="space-y-4">
@@ -529,7 +538,9 @@ const CreateOrder = () => {
                         >
                           -
                         </button>
-                        <span className="font-semibold">{item.quantity}</span>
+                        <span className="font-semibold">
+                          {item.quantity}
+                        </span>
                         <button
                           onClick={() => handleAddToCart(item)}
                           className="px-3 py-1 border rounded-lg hover:bg-gray-200"
@@ -542,44 +553,50 @@ const CreateOrder = () => {
                 </div>
 
                 {/* TOTAL */}
-                <div className="flex justify-between items-center text-xl font-bold mt-6">
+                <div className="text-xl font-bold mt-6 flex justify-between">
                   <span>Total:</span>
                   <span className="text-green-600">
                     {calculateTotal().toLocaleString("vi-VN")}₫
                   </span>
                 </div>
 
-                {/* PAYMENT METHOD - VNPay + COD (UI A) */}
+                {/* PAYMENT METHOD */}
                 <div className="mt-8">
-                  <label className="font-medium text-lg">Payment Method</label>
+                  <label className="font-medium text-lg">
+                    Payment Method
+                  </label>
 
                   <div className="flex flex-col gap-4 mt-4">
-                    {/* VNPay */}
+                    {/* Stripe */}
                     <div
-                      className={`border rounded-xl p-4 w-full cursor-pointer flex items-center gap-4 transition-all ${paymentMethod === "vnpay"
-                          ? "border-blue-600 bg-blue-50"
-                          : "bg-white hover:bg-gray-50"
+                      className={`border rounded-xl p-4 cursor-pointer flex items-center gap-4 transition-all 
+                        ${
+                          paymentMethod === "stripe"
+                            ? "border-blue-600 bg-blue-50"
+                            : "bg-white hover:bg-gray-50"
                         }`}
-                      onClick={() => setPaymentMethod("vnpay")}
+                      onClick={() => setPaymentMethod("stripe")}
                     >
                       <img
-                        src="https://vinadesign.vn/uploads/thumbnails/800/2023/05/vnpay-logo-vinadesign-25-12-59-16.jpg"
-                        alt="VNPay"
+                        src="https://vinadesign.vn/uploads/thumbnails/800/2023/05/Stripe-logo-vinadesign-25-12-59-16.jpg"
+                        alt="Stripe"
                         className="w-14 h-14 object-contain"
                       />
                       <div>
-                        <p className="font-semibold text-lg">VNPay</p>
+                        <p className="font-semibold text-lg">Stripe</p>
                         <p className="text-sm text-gray-500">
-                          Thanh toán online qua cổng VNPay
+                          Thanh toán online qua Stripe
                         </p>
                       </div>
                     </div>
 
                     {/* COD */}
                     <div
-                      className={`border rounded-xl p-4 w-full cursor-pointer flex items-center gap-4 transition-all ${paymentMethod === "cod"
-                          ? "border-yellow-500 bg-yellow-50"
-                          : "bg-white hover:bg-gray-50"
+                      className={`border rounded-xl p-4 cursor-pointer flex items-center gap-4 transition-all 
+                        ${
+                          paymentMethod === "cod"
+                            ? "border-yellow-500 bg-yellow-50"
+                            : "bg-white hover:bg-gray-50"
                         }`}
                       onClick={() => setPaymentMethod("cod")}
                     >
@@ -593,31 +610,48 @@ const CreateOrder = () => {
                           Cash On Delivery (COD)
                         </p>
                         <p className="text-sm text-gray-500">
-                          Thanh toán tiền mặt khi nhận hàng
+                          Thanh toán khi nhận hàng
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* PLACE ORDER BUTTON */}
+                {/* STRIPE CARD ELEMENT */}
+                {paymentMethod === "stripe" && (
+                  <div className="mt-6">
+                    <label className="font-medium mb-2 block">
+                      Card Information
+                    </label>
+                    <div className="border rounded-xl px-3 py-3 bg-white">
+                      <CardElement
+                        options={{
+                          style: {
+                            base: {
+                              fontSize: "16px",
+                              color: "#32325d",
+                              "::placeholder": { color: "#a0aec0" },
+                            },
+                            invalid: { color: "#e53e3e" },
+                          },
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* BUTTON */}
                 <button
                   onClick={handlePlaceOrder}
                   disabled={loading || !displayedCart.length}
-                  className="mt-6 w-full py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white font-semibold transition disabled:bg-gray-300"
+                  className="mt-6 w-full py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white font-semibold disabled:bg-gray-300"
                 >
                   {loading
                     ? "Processing..."
                     : paymentMethod === "cod"
-                      ? "Place Order (COD)"
-                      : "Proceed with VNPay"}
+                    ? "Place Order (COD)"
+                    : "Pay with Stripe"}
                 </button>
-
-                {!deliveryLocation && displayedCart.length > 0 && (
-                  <p className="text-green-600 mt-2 text-sm">
-                    Please provide your delivery location.
-                  </p>
-                )}
               </>
             ) : (
               <p className="text-gray-500">Your cart is empty.</p>
@@ -631,6 +665,15 @@ const CreateOrder = () => {
         © {new Date().getFullYear()} Fastfood. All rights reserved.
       </footer>
     </div>
+  );
+}
+
+// ================= WRAPPER WITH <Elements> =================
+const CreateOrder = () => {
+  return (
+    <Elements stripe={stripePromise}>
+      <OrderContent />
+    </Elements>
   );
 };
 

@@ -64,11 +64,17 @@ services:
     container_name: payment-service
     ports:
       - "5080:5008"
+    env_file:
+      - ./payment-service/.env
     environment:
       - PORT=5008
       - MONGO_URI=mongodb+srv://tyty:123@tyty.kennvuf.mongodb.net/payment-service?retryWrites=true&w=majority&appName=tyty
       - STRIPE_SECRET_KEY=sk_test_51S8Mu3L5S2BtEXK0Mtpi70zJFcLhIJXl7LwZe52ibq4J9K5U4mM1vaBz9M8T0dk2oPp3pyuBHrNpdlWmEP66abSc00aNmopKTv
       - JWT_SECRET=supersecret123
+      - VNPAY_TMNCODE=2QXUI4J4
+      - VNPAY_HASHSECRET=SECRETKEY123456789
+      - VNPAY_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+      - VNPAY_RETURN_URL=http://localhost:8000/payment/vnpay/return
     depends_on:
       - mongo
       - rabbitmq

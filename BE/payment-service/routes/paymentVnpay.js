@@ -1,39 +1,35 @@
 // routes/paymentRoutes.js
 const express = require("express");
 const router = express.Router();
-const qs = require("qs");
 const crypto = require("crypto");
+const axios = require("axios");
 
 const Payment = require("../models/Payment");
 const { verifyToken, allowRoles } = require("../utils/authMiddleware");
 const { publishEvent } = require("../rabbitmq");
 
-// Sort keys for checksum
-function sortObj(obj) {
-  let sorted = {};
-  let keys = Object.keys(obj).sort();
-  keys.forEach((key) => (sorted[key] = obj[key]));
-  return sorted;
-}
-
 /* ======================================================
-    🔹 CRUD PAYMENT
+    🔹 GET ALL PAYMENTS (ADMIN)
 ====================================================== */
-
-// GET ALL payments (admin)
 router.get("/", verifyToken, allowRoles("admin"), async (req, res) => {
   const data = await Payment.find().sort({ createdAt: -1 });
   res.json(data);
 });
 
-// GET payment by id
+/* ======================================================
+    🔹 GET PAYMENT BY ID
+====================================================== */
 router.get("/:id", verifyToken, async (req, res) => {
   const payment = await Payment.findById(req.params.id);
-  if (!payment) return res.status(404).json({ message: "Payment not found" });
+  if (!payment)
+    return res.status(404).json({ message: "Payment not found" });
+
   res.json(payment);
 });
 
-// UPDATE payment status
+/* ======================================================
+    🔹 ADMIN UPDATE STATUS
+====================================================== */
 router.patch(
   "/:id/status",
   verifyToken,
@@ -56,150 +52,153 @@ router.patch(
   }
 );
 
-// DELETE payment
-router.delete(
-  "/:id",
-  verifyToken,
-  allowRoles("admin"),
-  async (req, res) => {
-    await Payment.findByIdAndDelete(req.params.id);
-    res.json({ message: "Payment deleted" });
-  }
-);
 /* ======================================================
-    VNPay - Create Payment Link
+    🔹 DELETE PAYMENT
+====================================================== */
+router.delete("/:id", verifyToken, allowRoles("admin"), async (req, res) => {
+  await Payment.findByIdAndDelete(req.params.id);
+  res.json({ message: "Payment deleted" });
+});
+
+/* ======================================================
+    🔹 MOMO CREATE PAYMENT (DÙNG MOCK)
 ====================================================== */
 router.post(
-  "/vnpay/create",
+  "/momo/create",
   verifyToken,
   allowRoles("customer"),
   async (req, res) => {
     try {
       const { orderId, amount } = req.body;
-      if (!orderId || !amount) {
-        return res.status(400).json({ message: "orderId & amount are required" });
-      }
 
-      const tmnCode = process.env.VNPAY_TMNCODE;
-      const secretKey = process.env.VNPAY_HASHSECRET;
-      const vnpUrl = process.env.VNPAY_URL;
-      const returnUrl = process.env.VNPAY_RETURN_URL;
+      if (!orderId || !amount)
+        return res
+          .status(400)
+          .json({ message: "orderId & amount required" });
 
-      // Create payment record (status=processing)
+      // ===== MoMo Sandbox Keys (Fake để mock) =====
+      const partnerCode = "MOMOXXXX2025";
+      const accessKey = "ACCESSKEY123456";
+      const secretKey = "SECRETKEYMOCK123456";
+      const returnUrl = "http://localhost:8000/payment/momo/return";
+      const notifyUrl = "http://localhost:8000/payment/momo/webhook";
+
+      // ===== Tạo payment record =====
       const payment = await Payment.create({
         orderId,
-        customerEmail: req.user.email,   // 🔥 LƯU EMAIL
+        customerEmail: req.user.email,
         amount,
-        paymentMethod: "vnpay",
+        paymentMethod: "momo",
         paymentStatus: "processing",
       });
 
-      // Build params
-      let date = new Date();
-      let createDate = date.toISOString().replace(/[-T:.Z]/g, "").slice(0, 14);
+      const requestId = payment._id.toString();
+      const orderInfo = `Thanh toán đơn hàng ${orderId}`;
+      const extraData = "";
 
-      let ip = req.ip || "127.0.0.1";
-      let txnRef = payment._id.toString(); // UNIQUE reference
+      // ===== Tạo RAW SIGNATURE =====
+      const rawSignature =
+        "accessKey=" +
+        accessKey +
+        "&amount=" +
+        amount +
+        "&extraData=" +
+        extraData +
+        "&ipnUrl=" +
+        notifyUrl +
+        "&orderId=" +
+        requestId +
+        "&orderInfo=" +
+        orderInfo +
+        "&partnerCode=" +
+        partnerCode +
+        "&redirectUrl=" +
+        returnUrl +
+        "&requestId=" +
+        requestId +
+        "&requestType=captureWallet";
 
-      let params = {
-        vnp_Version: "2.1.0",
-        vnp_Command: "pay",
-        vnp_TmnCode: tmnCode,
-        vnp_Amount: amount * 100,
-        vnp_CurrCode: "VND",
-        vnp_TxnRef: txnRef,
-        vnp_OrderInfo: "Pay order " + orderId,
-        vnp_OrderType: "other",
-        vnp_Locale: "vn",
-        vnp_ReturnUrl: returnUrl,
-        vnp_IpAddr: ip,
-        vnp_CreateDate: createDate,
+      // ===== Ký HMAC SHA256 =====
+      const signature = crypto
+        .createHmac("sha256", secretKey)
+        .update(rawSignature)
+        .digest("hex");
+
+      // ===== MoMo Payload =====
+      const payload = {
+        partnerCode,
+        accessKey,
+        requestId,
+        amount,
+        orderId: requestId,
+        orderInfo,
+        redirectUrl: returnUrl,
+        ipnUrl: notifyUrl,
+        extraData,
+        requestType: "captureWallet",
+        signature,
       };
 
-      params = sortObj(params);
-      let signData = qs.stringify(params, { encode: false });
-      let hmac = crypto.createHmac("sha512", secretKey);
-      let signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+      // ===== MOCK MODE – KHÔNG GỌI MOMO API =====
+      const mockPayUrl = `https://test-payment.momo.vn/pay?orderId=${requestId}&amount=${amount}`;
 
-      params["vnp_SecureHash"] = signed;
-      let payUrl = vnpUrl + "?" + qs.stringify(params, { encode: false });
-
-      res.json({ payUrl });
+      return res.json({ payUrl: mockPayUrl });
     } catch (err) {
-      console.error("VNPay create error:", err);
-      res.status(500).json({ message: "Internal server error" });
+      console.error("MoMo create error:", err);
+      return res
+        .status(500)
+        .json({ message: "Internal server error" });
     }
   }
 );
 
 /* ======================================================
-    🔹 VNPay Return URL (FE redirect)
+    🔹 MOMO RETURN — LUÔN SUCCESS (MOCK)
 ====================================================== */
-router.get("/vnpay/return", async (req, res) => {
-  const code = req.query.vnp_ResponseCode;
-  if (code === "00") {
-    res.json({ message: "Payment success", query: req.query });
-  } else {
-    res.json({ message: "Payment failed", query: req.query });
-  }
+router.get("/momo/return", async (req, res) => {
+  return res.json({
+    success: true,
+    paymentId: req.query.orderId || "MOCK",
+    amount: req.query.amount || 0,
+    message: "MoMo Payment Success (MOCK)",
+    query: req.query,
+  });
 });
 
 /* ======================================================
-    🔹 VNPay Webhook / IPN — Xác nhận thật
+    🔹 MOMO WEBHOOK — MOCK 100% SUCCESS
 ====================================================== */
-router.get("/vnpay/webhook", async (req, res) => {
+router.post("/momo/webhook", async (req, res) => {
   try {
-    let vnp_Params = { ...req.query };
-    let secureHash = vnp_Params["vnp_SecureHash"];
+    console.log("⚠️ MoMo MOCK WEBHOOK — ALWAYS SUCCESS");
 
-    delete vnp_Params["vnp_SecureHash"];
-    delete vnp_Params["vnp_SecureHashType"];
+    const { orderId } = req.body;
 
-    const secretKey = process.env.VNPAY_HASHSECRET;
-    vnp_Params = sortObj(vnp_Params);
-    let signData = qs.stringify(vnp_Params, { encode: false });
+    const payment = await Payment.findById(orderId);
 
-    let signed = crypto
-      .createHmac("sha512", secretKey)
-      .update(Buffer.from(signData, "utf-8"))
-      .digest("hex");
+    if (!payment)
+      return res.json({ resultCode: 1001, message: "Payment not found" });
 
-    // ❌ WRONG SIGNATURE
-    if (secureHash !== signed) {
-      return res.status(400).json({ RspCode: "97", Message: "Invalid signature" });
-    }
+    payment.paymentStatus = "paid";
+    payment.transactionId = "MOMO_MOCK_" + Date.now();
+    payment.bankCode = "MoMoWallet";
+    payment.momoResultCode = "0";
+    await payment.save();
 
-    // Get info
-    const paymentId = vnp_Params["vnp_TxnRef"];
-    const responseCode = vnp_Params["vnp_ResponseCode"];
-    const transactionId = vnp_Params["vnp_TransactionNo"];
-    const bankCode = vnp_Params["vnp_BankCode"];
+    // ===== PUBLISH EVENT ĐẾN ORDER-SERVICE =====
+    await publishEvent("payment.succeeded", {
+      orderId: payment.orderId.toString(),
+      amount: payment.amount,
+      method: "momo",
+    });
 
-    // Update DB
-    const payment = await Payment.findByIdAndUpdate(
-      paymentId,
-      {
-        paymentStatus: responseCode === "00" ? "paid" : "failed",
-        transactionId,
-        bankCode,
-        vnpResponseCode: responseCode,
-      },
-      { new: true }
-    );
-
-    // Publish event to Order Service
-    if (payment && responseCode === "00") {
-      await publishEvent("payment.succeeded", {
-        orderId: payment.orderId.toString(),
-        amount: payment.amount,
-        method: "vnpay",
-      });
-    }
-
-    res.json({ RspCode: "00", Message: "Success" });
+    return res.json({
+      resultCode: 0,
+      message: "Success (MOCK MODE)",
+    });
   } catch (err) {
-    console.error("Webhook error:", err);
-    res.json({ RspCode: "99", Message: err.message });
+    console.error("MoMo webhook error:", err);
+    return res.json({ resultCode: 9999, message: err.message });
   }
 });
 
