@@ -124,6 +124,15 @@ app.use(
     }
   })
 );
+// --- DRONE ---
+  app.use(
+    "/drone",
+    createProxyMiddleware({
+      target: "http://drone-service:5009",
+      changeOrigin: true,
+      pathRewrite: { "^/drone": "" },
+    })
+  );
 }
 
 

@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { MapContainer, TileLayer, Marker, Polyline } from "react-leaflet";
-import dronePng from "../assets/icons/drone.png";
 import L from "leaflet";
+import dronePng from "../assets/icons/drone.png";
 
 // ⭐ Icon nhà hàng
 const restaurantIcon = L.icon({
@@ -19,16 +19,15 @@ const customerIcon = L.icon({
   iconAnchor: [19, 38],
 });
 
-// Icon drone đẹp
+// ⭐ Icon drone
 const droneIcon = L.icon({
   iconUrl: dronePng,
-  iconSize: [70, 70], // chỉnh cho đẹp
-  iconAnchor: [35, 35], // tâm icon
+  iconSize: [70, 70],
+  iconAnchor: [35, 35],
 });
 
-// Fix icon mặc định của Leaflet
+// Fix icon mặc định Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
-
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
@@ -44,13 +43,13 @@ export default function DroneTracking() {
   const [tracking, setTracking] = useState(null);
   const [dronePos, setDronePos] = useState(null);
 
-  // Gọi API 1 lần để lấy vị trí restaurant + customer
+  // ================================
+  // 🛰 GET tracking
+  // ================================
   useEffect(() => {
     const fetchTracking = async () => {
       try {
-        const res = await axios.get(
-          `http://localhost:8000/drone/tracking/${orderId}`
-        );
+        const res = await axios.get(`/drone/tracking/${orderId}`);
         setTracking(res.data);
       } catch (err) {
         console.log("Fail load tracking", err);
@@ -60,61 +59,75 @@ export default function DroneTracking() {
     fetchTracking();
   }, [orderId]);
 
-  // Khi đã có tracking → bắt đầu animate drone trên line
+  // ================================
+  // ❗ Kiểm tra dữ liệu trước khi render
+  // ================================
+  if (
+    !tracking ||
+    !tracking.restaurant ||
+    !tracking.customer ||
+    tracking.restaurant.latitude === undefined ||
+    tracking.customer.latitude === undefined
+  ) {
+    return (
+      <div style={{ color: "white", padding: 20 }}>
+        Đang tải dữ liệu drone...
+      </div>
+    );
+  }
+
+  const restaurantPos = [
+    tracking.restaurant.latitude,
+    tracking.restaurant.longitude,
+  ];
+  const customerPos = [
+    tracking.customer.latitude,
+    tracking.customer.longitude,
+  ];
+
+  // ================================
+  // 🛫 Animation Drone
+  // ================================
   useEffect(() => {
     if (!tracking) return;
 
-    const restaurantPos = [
-      tracking.restaurant.latitude,
-      tracking.restaurant.longitude,
-    ];
-    const customerPos = [
-      tracking.customer.latitude,
-      tracking.customer.longitude,
-    ];
-
-    // Bắt đầu tại nhà hàng
-    setDronePos(restaurantPos);
-
-    const steps = 100; // số bước bay (càng nhiều càng mượt)
-    const speedMs = 150; // thời gian mỗi bước (ms) → 120 * 200ms = 24s
+    const steps = 100;
+    const speed = 120;
 
     const latStep = (customerPos[0] - restaurantPos[0]) / steps;
     const lngStep = (customerPos[1] - restaurantPos[1]) / steps;
 
-    let currentStep = 0;
+    let step = 0;
+
+    setDronePos(restaurantPos); // bắt đầu tại nhà hàng
 
     const interval = setInterval(() => {
-      currentStep++;
+      step++;
 
-      if (currentStep >= steps) {
-        // Tới nơi → gắn đúng vị trí khách hàng và dừng
+      if (step >= steps) {
         setDronePos(customerPos);
         clearInterval(interval);
         return;
       }
 
       setDronePos((prev) => {
-        const [prevLat, prevLng] = prev || restaurantPos;
-        return [prevLat + latStep, prevLng + lngStep];
+        const [lat, lng] = prev ?? restaurantPos;
+        return [lat + latStep, lng + lngStep];
       });
-    }, speedMs);
+    }, speed);
 
     return () => clearInterval(interval);
   }, [tracking]);
 
-  if (!tracking || !dronePos)
-    return <div style={{ color: "white" }}>Loading...</div>;
+  if (!dronePos)
+    return <div style={{ color: "white", padding: 20 }}>Loading drone...</div>;
 
-  const restaurantPos = [
-    tracking.restaurant.latitude,
-    tracking.restaurant.longitude,
-  ];
-  const customerPos = [tracking.customer.latitude, tracking.customer.longitude];
-
+  // ================================
+  // ⭐ MAP UI
+  // ================================
   return (
     <div style={{ padding: 20 }}>
-      <h2 style={{ color: "white" }}>Drone Delivery Tracking</h2>
+      <h2 style={{ color: "white" }}>🚁 Drone Delivery Tracking</h2>
 
       <div style={{ width: "100%", height: "600px" }}>
         <MapContainer
@@ -123,7 +136,7 @@ export default function DroneTracking() {
           style={{
             width: "100%",
             height: "100%",
-            borderRadius: "8px",
+            borderRadius: "10px",
             overflow: "hidden",
           }}
         >
@@ -132,16 +145,10 @@ export default function DroneTracking() {
             attribution="© OpenStreetMap contributors"
           />
 
-          {/* 🏪 Marker nhà hàng */}
           <Marker position={restaurantPos} icon={restaurantIcon} />
-
-          {/* 👤 Marker khách hàng */}
           <Marker position={customerPos} icon={customerIcon} />
-
-          {/* 🚁 Marker drone với icon riêng + vị trí animate */}
           <Marker position={dronePos} icon={droneIcon} />
 
-          {/* Đường bay: nhà hàng → drone hiện tại → khách hàng */}
           <Polyline
             positions={[restaurantPos, dronePos, customerPos]}
             color="red"
