@@ -50,6 +50,9 @@ export default function AdminDashboard() {
   if (loading) return <CenteredText text="Loading dashboard..." />;
   if (!stats) return <CenteredText text="No statistics available." />;
 
+  /* ============================================================
+      APPLY FILTER
+  ============================================================ */
   const filteredOrders = orders.filter((o) => {
     const f = filters;
     if (f.restaurantId && o.restaurantId !== f.restaurantId) return false;
@@ -58,6 +61,17 @@ export default function AdminDashboard() {
     if (f.deliveryMethod && o.deliveryMethod !== f.deliveryMethod) return false;
     return true;
   });
+
+  /* ============================================================
+      COMPUTE STATS BASED ON FILTERED ORDERS
+  ============================================================ */
+  const filteredStats = {
+    totalOrders: filteredOrders.length,
+    totalRevenue: filteredOrders.reduce(
+      (sum, o) => sum + (o.totalAmount || 0),
+      0
+    ),
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 text-gray-800">
@@ -68,7 +82,7 @@ export default function AdminDashboard() {
         </h1>
 
         {/* SUMMARY */}
-        <SummaryCards stats={stats} />
+        <SummaryCards stats={filteredStats} />
 
         {/* FILTERS */}
         <FilterPanel
