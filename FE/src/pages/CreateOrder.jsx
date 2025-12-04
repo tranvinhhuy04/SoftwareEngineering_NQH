@@ -578,7 +578,7 @@ function OrderContent() {
                       onClick={() => setPaymentMethod("stripe")}
                     >
                       <img
-                        src="https://vinadesign.vn/uploads/thumbnails/800/2023/05/Stripe-logo-vinadesign-25-12-59-16.jpg"
+                        src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRXVX71WNylmOuKOOmadMbHiYbSdtyD7GtSNg&s"
                         alt="Stripe"
                         className="w-14 h-14 object-contain"
                       />
