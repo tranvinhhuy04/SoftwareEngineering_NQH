@@ -146,3 +146,17 @@
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-out;
 }
+
+
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+
+@media (min-width: 768px) {
+  .card .card-img { height: 8rem; }
+}

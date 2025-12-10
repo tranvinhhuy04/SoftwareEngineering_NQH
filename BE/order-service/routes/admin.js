@@ -26,35 +26,45 @@ router.get("/all", verifyToken, allowRoles("admin"), async (req, res) => {
   }
 });
 
-/* ============================================================
-   📊 ADMIN DASHBOARD – FULL STATISTICS (MATCH SCHEMA 100%)
-============================================================ */
-/* ============================================================
-   📊 ADMIN DASHBOARD – FULL STATISTICS (ALL ORDERS, NO FILTER)
-============================================================ */
-/* ============================================================
-   📊 ADMIN DASHBOARD – FULL STATISTICS (ALL ORDERS, NO FILTER)
-============================================================ */
 router.get("/stats", verifyToken, allowRoles("admin"), async (req, res) => {
   try {
     console.log("MongoDB name:", Order.db.name);
     console.log("MongoDB collection:", Order.collection.name);
     console.log("Count all orders:", await Order.countDocuments({}));
 
-    // ⛳ 1) Chỉ tính đơn hàng đã giao thành công
+    /* ============================================================
+       1) DATE FILTER (OPTIONAL)
+    ============================================================ */
+    const { from, to } = req.query;
+
+    const dateFilter = {};
+    if (from) dateFilter.$gte = new Date(from);
+    if (to) {
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+      dateFilter.$lte = toDate;
+    }
+
+    // Base filter: delivered only
     const deliveredFilter = { orderStatus: "delivered" };
 
-    // Tổng số đơn delivered
+    // If date filter exists -> add to filter
+    if (Object.keys(dateFilter).length > 0) {
+      deliveredFilter.orderDate = dateFilter;
+    }
+
+    /* ============================================================
+       2) BASIC METRICS (still same as old version)
+    ============================================================ */
+
     const totalOrders = await Order.countDocuments(deliveredFilter);
 
-    // Tổng doanh thu delivered
     const totalRevenueAgg = await Order.aggregate([
       { $match: deliveredFilter },
       { $group: { _id: null, total: { $sum: "$totalAmount" } } },
     ]);
     const totalRevenue = totalRevenueAgg[0]?.total || 0;
 
-    // Báo cáo theo nhà hàng — chỉ delivered
     const restaurantAgg = await Order.aggregate([
       { $match: deliveredFilter },
       {
@@ -66,45 +76,65 @@ router.get("/stats", verifyToken, allowRoles("admin"), async (req, res) => {
       },
     ]);
 
-    // Báo cáo theo tài xế — chỉ delivered
     const deliveryAgg = await Order.aggregate([
       { $match: deliveredFilter },
       {
         $group: {
-          _id: "$deliveryPersonEmail",   // ✔ FIX đúng schema
+          _id: "$deliveryPersonEmail",
           orders: { $sum: 1 },
           revenue: { $sum: "$totalAmount" },
         },
       },
     ]);
 
-    // Báo cáo theo khách hàng — chỉ delivered
     const customerAgg = await Order.aggregate([
       { $match: deliveredFilter },
       {
         $group: {
-          _id: "$customerEmail",        // ✔ FIX đúng schema
+          _id: "$customerEmail",
           orders: { $sum: 1 },
           totalSpent: { $sum: "$totalAmount" },
         },
       },
     ]);
 
-    /* --------------------------------------------------------------------
-       2) Lấy thông tin restaurant + user để map tên vào bảng Breakdown
-    -------------------------------------------------------------------- */
+    /* ============================================================
+       3) NEW: dailyAgg để làm biểu đồ theo ngày
+    ============================================================ */
+    const dailyAgg = await Order.aggregate([
+      { $match: deliveredFilter },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$orderDate" },
+          },
+          orders: { $sum: 1 },
+          revenue: { $sum: "$totalAmount" },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    /* ============================================================
+       4) FETCH restaurant + users
+    ============================================================ */
 
     let restaurantNames = {};
     try {
-      const resp = await http.get(`${RESTAURANT_SERVICE_URL}/api/restaurants`);
-      if (Array.isArray(resp.data)) {
-        resp.data.forEach((r) => {
-          restaurantNames[r._id] = r.name;
+      // API đúng của bạn
+      const resp = await http.get(`${RESTAURANT_SERVICE_URL}/restaurant/getAllRestaurant`);
+
+      const list = resp.data.restaurants || resp.data; // fallback
+
+      if (Array.isArray(list)) {
+        list.forEach(r => {
+          restaurantNames[r._id] = r.name;   // gán name vào map
         });
       }
     } catch (e) {
       console.warn("Warning: failed to fetch restaurant names:", e.message);
     }
+
 
     async function getUserNames(emails) {
       if (!emails.length) return {};
@@ -114,11 +144,9 @@ router.get("/stats", verifyToken, allowRoles("admin"), async (req, res) => {
           { emails }
         );
         const map = {};
-        resp.data.forEach((u) => {
-          map[u.email] = u;
-        });
+        resp.data.forEach((u) => (map[u.email] = u));
         return map;
-      } catch (e) {
+      } catch {
         return {};
       }
     }
@@ -129,7 +157,6 @@ router.get("/stats", verifyToken, allowRoles("admin"), async (req, res) => {
     const deliveryUsers = await getUserNames(deliveryEmails);
     const customerUsers = await getUserNames(customerEmails);
 
-    // Logic chia shares
     function calcShares(total) {
       return {
         restaurant: Math.round(total * 0.8),
@@ -138,9 +165,9 @@ router.get("/stats", verifyToken, allowRoles("admin"), async (req, res) => {
       };
     }
 
-    /* --------------------------------------------------------------------
-       3) Format breakdown trả về cho FE
-    -------------------------------------------------------------------- */
+    /* ============================================================
+       5) Format breakdown giữ nguyên schema cũ
+    ============================================================ */
 
     const restaurantBreakdown = restaurantAgg.map((r) => ({
       restaurantName: restaurantNames[r._id] || r._id,
@@ -158,14 +185,17 @@ router.get("/stats", verifyToken, allowRoles("admin"), async (req, res) => {
 
     const customerBreakdown = customerAgg.map((c) => ({
       customerName: c._id,
-      email: customerUsers[c._id]?.username || c._id || "-",
+      email: customerUsers[c._id]?.username || c._id,
       orders: c.orders,
       totalSpent: c.totalSpent,
     }));
 
-    /* --------------------------------------------------------------------
-       4) Response JSON trả về FE
-    -------------------------------------------------------------------- */
+    /* ============================================================
+       6) FINAL RESPONSE
+       ✔ giữ nguyên keys cũ
+       ✔ thêm dailyAgg
+       ✔ FE không bị lỗi
+    ============================================================ */
 
     res.json({
       totalOrders,
@@ -173,12 +203,14 @@ router.get("/stats", verifyToken, allowRoles("admin"), async (req, res) => {
       restaurantAgg: restaurantBreakdown,
       deliveryAgg: deliveryBreakdown,
       customerAgg: customerBreakdown,
+      dailyAgg, // <-- chỉ thêm cái này
     });
   } catch (err) {
     console.error("Error fetching admin stats:", err.message);
     res.status(500).json({ message: "Failed to fetch admin stats" });
   }
 });
+
 
 // ✅ Get delivered count for a given drone (admin)
 router.get(

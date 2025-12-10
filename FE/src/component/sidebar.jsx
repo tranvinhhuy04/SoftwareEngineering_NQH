@@ -164,6 +164,11 @@ const Sidebar = ({ user }) => {
                 <Truck size={20} />
                 <span className={labelClass}>Drone Management</span>
               </Link>
+
+               <Link to="/test" className={linkClass("/test")}>
+                <Truck size={20} />
+                <span className={labelClass}>Stats</span>
+              </Link>
             </>
           )}
 
