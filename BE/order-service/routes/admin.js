@@ -32,83 +32,90 @@ router.get("/all", verifyToken, allowRoles("admin"), async (req, res) => {
 /* ============================================================
    📊 ADMIN DASHBOARD – FULL STATISTICS (ALL ORDERS, NO FILTER)
 ============================================================ */
-// ✅ Admin thống kê tổng hợp
+/* ============================================================
+   📊 ADMIN DASHBOARD – FULL STATISTICS (ALL ORDERS, NO FILTER)
+============================================================ */
 router.get("/stats", verifyToken, allowRoles("admin"), async (req, res) => {
   try {
+    console.log("MongoDB name:", Order.db.name);
+    console.log("MongoDB collection:", Order.collection.name);
+    console.log("Count all orders:", await Order.countDocuments({}));
+
     // ⛳ 1) Chỉ tính đơn hàng đã giao thành công
-    const deliveredFilter = { status: "delivered" };
+    const deliveredFilter = { orderStatus: "delivered" };
 
     // Tổng số đơn delivered
     const totalOrders = await Order.countDocuments(deliveredFilter);
 
     // Tổng doanh thu delivered
     const totalRevenueAgg = await Order.aggregate([
-      { $match: deliveredFilter }, // ⭐ thêm match
-      { $group: { _id: null, total: { $sum: "$total" } } },
+      { $match: deliveredFilter },
+      { $group: { _id: null, total: { $sum: "$totalAmount" } } },
     ]);
     const totalRevenue = totalRevenueAgg[0]?.total || 0;
 
     // Báo cáo theo nhà hàng — chỉ delivered
     const restaurantAgg = await Order.aggregate([
-      { $match: deliveredFilter }, // ⭐ thêm match
+      { $match: deliveredFilter },
       {
         $group: {
           _id: "$restaurantId",
           orders: { $sum: 1 },
-          revenue: { $sum: "$total" },
+          revenue: { $sum: "$totalAmount" },
         },
       },
     ]);
 
     // Báo cáo theo tài xế — chỉ delivered
     const deliveryAgg = await Order.aggregate([
-      { $match: deliveredFilter }, // ⭐ thêm match
+      { $match: deliveredFilter },
       {
         $group: {
-          _id: "$deliveryPersonId",
+          _id: "$deliveryPersonEmail",   // ✔ FIX đúng schema
           orders: { $sum: 1 },
-          revenue: { $sum: "$total" },
+          revenue: { $sum: "$totalAmount" },
         },
       },
     ]);
 
     // Báo cáo theo khách hàng — chỉ delivered
     const customerAgg = await Order.aggregate([
-      { $match: deliveredFilter }, // ⭐ thêm match
+      { $match: deliveredFilter },
       {
         $group: {
-          _id: "$customerId",
+          _id: "$customerEmail",        // ✔ FIX đúng schema
           orders: { $sum: 1 },
-          totalSpent: { $sum: "$total" },
+          totalSpent: { $sum: "$totalAmount" },
         },
       },
     ]);
 
-    /* ---- GIỮ NGUYÊN PHẦN FETCH RESTAURANT + USER INFO ---- */
+    /* --------------------------------------------------------------------
+       2) Lấy thông tin restaurant + user để map tên vào bảng Breakdown
+    -------------------------------------------------------------------- */
 
     let restaurantNames = {};
     try {
       const resp = await http.get(`${RESTAURANT_SERVICE_URL}/api/restaurants`);
       if (Array.isArray(resp.data)) {
         resp.data.forEach((r) => {
-          restaurantNames[r._id || r._id?.toString()] =
-            r.name || r.restaurantName || r.name;
+          restaurantNames[r._id] = r.name;
         });
       }
     } catch (e) {
       console.warn("Warning: failed to fetch restaurant names:", e.message);
     }
 
-    async function getUserNames(ids) {
-      if (!ids.length) return {};
+    async function getUserNames(emails) {
+      if (!emails.length) return {};
       try {
         const resp = await http.post(
           `${AUTH_SERVICE_URL}/admin/users/bulk-info`,
-          { ids }
+          { emails }
         );
         const map = {};
         resp.data.forEach((u) => {
-          map[u._id] = u;
+          map[u.email] = u;
         });
         return map;
       } catch (e) {
@@ -116,12 +123,13 @@ router.get("/stats", verifyToken, allowRoles("admin"), async (req, res) => {
       }
     }
 
-    const deliveryIds = deliveryAgg.map((d) => d._id).filter(Boolean);
-    const customerIds = customerAgg.map((c) => c._id).filter(Boolean);
-    const deliveryUsers = await getUserNames(deliveryIds);
-    const customerUsers = await getUserNames(customerIds);
+    const deliveryEmails = deliveryAgg.map((d) => d._id).filter(Boolean);
+    const customerEmails = customerAgg.map((c) => c._id).filter(Boolean);
 
-    // Giữ nguyên logic chia shares
+    const deliveryUsers = await getUserNames(deliveryEmails);
+    const customerUsers = await getUserNames(customerEmails);
+
+    // Logic chia shares
     function calcShares(total) {
       return {
         restaurant: Math.round(total * 0.8),
@@ -130,6 +138,10 @@ router.get("/stats", verifyToken, allowRoles("admin"), async (req, res) => {
       };
     }
 
+    /* --------------------------------------------------------------------
+       3) Format breakdown trả về cho FE
+    -------------------------------------------------------------------- */
+
     const restaurantBreakdown = restaurantAgg.map((r) => ({
       restaurantName: restaurantNames[r._id] || r._id,
       orders: r.orders,
@@ -137,24 +149,23 @@ router.get("/stats", verifyToken, allowRoles("admin"), async (req, res) => {
       shares: calcShares(r.revenue),
     }));
 
-    const deliveryBreakdown = deliveryAgg.map((d) => {
-      const idKey = d._id || "unassigned";
-      return {
-        deliveryId: idKey,
-        deliveryName:
-          deliveryUsers[d._id]?.name || (d._id ? d._id : "Unassigned"),
-        orders: d.orders,
-        revenue: d.revenue,
-        shares: calcShares(d.revenue),
-      };
-    });
+    const deliveryBreakdown = deliveryAgg.map((d) => ({
+      deliveryName: deliveryUsers[d._id]?.username || d._id || "Unknown",
+      orders: d.orders,
+      revenue: d.revenue,
+      shares: calcShares(d.revenue),
+    }));
 
     const customerBreakdown = customerAgg.map((c) => ({
       customerName: c._id,
-      email: customerUsers[c._id]?.username || "-",
+      email: customerUsers[c._id]?.username || c._id || "-",
       orders: c.orders,
       totalSpent: c.totalSpent,
     }));
+
+    /* --------------------------------------------------------------------
+       4) Response JSON trả về FE
+    -------------------------------------------------------------------- */
 
     res.json({
       totalOrders,

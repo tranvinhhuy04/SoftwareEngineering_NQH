@@ -26,7 +26,7 @@ import DroneTracking from "./pages/DroneTracking";
 
 
 import TestCreateOrder from "./pages/TestCreateOrder";
-
+import Test from "./pages/admin/test";   
 
 const App = () => {
   return (
@@ -70,6 +70,7 @@ const App = () => {
           <Route element={<ProtectedLayout allowedRoles={["admin"]} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/drones" element={<AdminDroneList />} />
+            <Route path="/test" element={<Test />} />
           </Route>
         </Routes>
       </BrowserRouter>
