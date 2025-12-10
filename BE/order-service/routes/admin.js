@@ -269,18 +269,19 @@ router.post(
   allowRoles("admin"),
   async (req, res) => {
     try {
-      const { customerIds } = req.body;
-      if (!customerIds || !Array.isArray(customerIds)) {
-        return res.status(400).json({ message: "Missing or invalid customerIds" });
+      const { customerEmails } = req.body;
+
+      if (!customerEmails || !Array.isArray(customerEmails)) {
+        return res.status(400).json({ message: "Missing or invalid emails" });
       }
 
       const counts = await Order.aggregate([
-        { $match: { customerId: { $in: customerIds } } },
-        { $group: { _id: "$customerId", count: { $sum: 1 } } }
+        { $match: { customerEmail: { $in: customerEmails } } },
+        { $group: { _id: "$customerEmail", count: { $sum: 1 } } },
       ]);
 
       const countMap = {};
-      counts.forEach(item => {
+      counts.forEach((item) => {
         countMap[item._id] = item.count;
       });
 
@@ -292,35 +293,56 @@ router.post(
   }
 );
 
+
 // ✅ Get order counts for multiple restaurants (admin)
-router.post(
-  "/restaurants/order-counts",
-  verifyToken,
-  allowRoles("admin"),
-  async (req, res) => {
-    try {
-      const { restaurantIds } = req.body;
-      if (!restaurantIds || !Array.isArray(restaurantIds)) {
-        return res.status(400).json({ message: "Missing or invalid restaurantIds" });
-      }
+// ✅ Get order counts for multiple restaurants (admin)
+router.post("/restaurants/order-counts", async (req, res) => {
+  try {
+    const { restaurantIds } = req.body;
 
-      const counts = await Order.aggregate([
-        { $match: { restaurantId: { $in: restaurantIds } } },
-        { $group: { _id: "$restaurantId", count: { $sum: 1 } } }
-      ]);
-
-      const countMap = {};
-      counts.forEach(item => {
-        countMap[item._id] = item.count;
-      });
-
-      res.json(countMap);
-    } catch (err) {
-      console.error("Error getting restaurant order counts:", err.message);
-      res.status(500).json({ message: "Failed to get order counts" });
+    if (!restaurantIds || !Array.isArray(restaurantIds)) {
+      return res.status(400).json({ message: "Missing restaurantIds" });
     }
-  }
-);
 
+    // Convert string → ObjectId
+    const objectIds = restaurantIds.map(id => Types.ObjectId(id));
+
+    // 1) Đếm số đơn theo restaurantId
+    const counts = await Order.aggregate([
+      { $match: { restaurantId: { $in: objectIds } } },
+      {
+        $group: {
+          _id: "$restaurantId",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // 2) Fetch danh sách restaurant từ restaurant-service
+    const resp = await axios.get("http://localhost:8000/restaurant/getAllRestaurant");
+    const restaurants = resp.data;
+
+    // Tạo map id(string) → name
+    const nameMap = {};
+    restaurants.forEach(r => {
+      nameMap[r._id.toString()] = r.name;  // 🔥 FIXED
+    });
+
+    // 3) Trả về dạng map { id: {count, name} }
+    const result = {};
+    counts.forEach(c => {
+      const id = c._id.toString();
+      result[id] = {
+        name: nameMap[id] || "Unknown",
+        count: c.count,
+      };
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error("Error counting restaurant orders:", err);
+    res.status(500).json({ message: "Failed to count restaurant orders" });
+  }
+});
 
 module.exports = router;

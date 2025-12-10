@@ -96,41 +96,54 @@ export default function AdminDashboard() {
   // Customers
   // ------------------------------------------------
   const fetchCustomers = async () => {
-    setLoadingCustomers(true);
-    try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:8000/auth/admin/customers", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+  setLoadingCustomers(true);
 
-      const customerIds = res.data.map((c) => c._id);
-      let orderCounts = {};
-      if (customerIds.length > 0) {
-        try {
-          const countsRes = await axios.post(
-            "http://localhost:8000/order/admin/customers/order-counts",
-            { customerIds },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          orderCounts = countsRes.data;
-        } catch (err) {
-          console.warn("Failed to fetch customer order counts:", err);
-        }
+  try {
+    const token = localStorage.getItem("token");
+
+    // 1) Lấy tất cả user
+    const res = await axios.get("http://localhost:8000/auth/users", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    // 2) Chỉ lấy customer
+    const customers = res.data.filter(u => u.role === "customer");
+
+    const customerEmails = customers.map(c => c.email);
+
+    let orderCounts = {};
+
+    if (customerEmails.length > 0) {
+      try {
+        const countsRes = await axios.post(
+          "http://localhost:8000/order/admin/customers/order-counts",
+          { customerEmails },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        orderCounts = countsRes.data;
+      } catch (err) {
+        console.warn("Failed to fetch customer order counts:", err);
       }
-
-      const customersWithCounts = res.data.map((customer) => ({
-        ...customer,
-        orderCount: orderCounts[customer._id] || 0,
-      }));
-
-      setCustomers(customersWithCounts);
-    } catch (err) {
-      console.error("Failed to fetch customers:", err);
-      alert("Không thể tải danh sách khách hàng");
-    } finally {
-      setLoadingCustomers(false);
     }
-  };
+
+    // 3) Add số lượng đơn hàng vào từng customer
+    const customersWithCounts = customers.map((c) => ({
+      ...c,
+      orderCount: orderCounts[c.email] || 0,
+    }));
+
+    // 🔥 Sort giảm dần theo tổng đơn hàng
+    customersWithCounts.sort((a, b) => b.orderCount - a.orderCount);
+    setCustomers(customersWithCounts);
+
+  } catch (err) {
+    console.error("Failed to fetch customers:", err);
+    alert("Không thể tải danh sách khách hàng");
+  } finally {
+    setLoadingCustomers(false);
+  }
+};
+
 
   // ------------------------------------------------
   // Restaurants
@@ -140,7 +153,7 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       const res = await axios.get(
-        "http://localhost:8000/restaurant/api/restaurants",
+        "http://localhost:8000/restaurant/getAllRestaurant",
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -194,8 +207,8 @@ export default function AdminDashboard() {
   // ------------------------------------------------
   // Handlers: delete / lock
   // ------------------------------------------------
-  const handleDeleteCustomer = async (customerId, username) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa tài khoản "${username}"?`)) {
+  const handleDeleteCustomer = async (customerId, name) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa tài khoản "${name}"?`)) {
       return;
     }
 
@@ -341,6 +354,15 @@ export default function AdminDashboard() {
               }`}
           >
             📊 Thống kê
+          </button>
+          <button
+            onClick={() => setActiveTab("accounts")}
+            className={`px-4 py-2 font-semibold transition-colors ${activeTab === "accounts"
+                ? "text-green-400 border-b-2 border-green-400"
+                : "text-gray-400 hover:text-gray-200"
+              }`}
+          >
+            👥 Quản lý tài khoản
           </button>
 
         </div>
@@ -490,44 +512,44 @@ function StatsView({
     <>
       <div className="container mx-auto">
         {/* Date Filter */}
-<section className="bg-white border rounded-xl shadow-sm p-5 mb-6">
-  <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-    <span>📅</span> Bộ lọc thời gian
-  </h3>
+        <section className="bg-white border rounded-xl shadow-sm p-5 mb-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <span>📅</span> Bộ lọc thời gian
+          </h3>
 
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
 
-    <div>
-      <label className="text-gray-500 text-sm mb-1 block">Từ ngày</label>
-      <input
-        type="date"
-        value={fromDate}
-        onChange={(e) => onChangeDate("from", e.target.value)}
-        className="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white 
+            <div>
+              <label className="text-gray-500 text-sm mb-1 block">Từ ngày</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => onChangeDate("from", e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white 
         text-gray-700 shadow-sm focus:ring-2 focus:ring-green-500"
-      />
-    </div>
+              />
+            </div>
 
-    <div>
-      <label className="text-gray-500 text-sm mb-1 block">Đến ngày</label>
-      <input
-        type="date"
-        value={toDate}
-        onChange={(e) => onChangeDate("to", e.target.value)}
-        className="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white 
+            <div>
+              <label className="text-gray-500 text-sm mb-1 block">Đến ngày</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => onChangeDate("to", e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white 
         text-gray-700 shadow-sm focus:ring-2 focus:ring-green-500"
-      />
-    </div>
+              />
+            </div>
 
-    <button
-      onClick={onApplyFilter}
-      className="px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white 
+            <button
+              onClick={onApplyFilter}
+              className="px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white 
       font-semibold shadow-md transition w-full md:w-auto"
-    >
-      Apply
-    </button>
-  </div>
-</section>
+            >
+              Apply
+            </button>
+          </div>
+        </section>
 
         {/* Summary cards */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-4">
@@ -754,6 +776,9 @@ function AccountsView({ customers, loading, onDelete, onLock }) {
                 Username
               </th>
               <th className="px-4 py-2 font-semibold border-b border-gray-800 text-left">
+                Email
+              </th>
+              <th className="px-4 py-2 font-semibold border-b border-gray-800 text-left">
                 Tổng đơn hàng
               </th>
               <th className="px-4 py-2 font-semibold border-b border-gray-800 text-left">
@@ -775,7 +800,10 @@ function AccountsView({ customers, loading, onDelete, onLock }) {
                   className={i % 2 === 0 ? "bg-gray-900" : "bg-gray-800"}
                 >
                   <td className="px-4 py-2 border-b border-gray-800 text-gray-200">
-                    {customer.username}
+                    {customer.name}
+                  </td>
+                  <td className="px-4 py-2 border-b border-gray-800 text-gray-200">
+                    {customer.email}
                   </td>
                   <td className="px-4 py-2 border-b border-gray-800 text-gray-200">
                     {customer.orderCount || 0}
@@ -801,8 +829,8 @@ function AccountsView({ customers, loading, onDelete, onLock }) {
                     <button
                       onClick={() =>
                         onLock(
-                          customer._id,
-                          customer.username,
+                          customer.email,
+                          customer.name,
                           customer.isLocked
                         )
                       }
@@ -814,7 +842,7 @@ function AccountsView({ customers, loading, onDelete, onLock }) {
                       {customer.isLocked ? "🔓 Mở khóa" : "🔒 Khóa"}
                     </button>
                     <button
-                      onClick={() => onDelete(customer._id, customer.username)}
+                      onClick={() => onDelete(customer.email, customer.name)}
                       className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded transition-colors"
                     >
                       🗑️ Xóa

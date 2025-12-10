@@ -49,6 +49,9 @@ const userSchema = new mongoose.Schema(
       default: true,
     },
 
+    isLocked: { type: Boolean, default: false }, // ✅ Account lock status
+    lockReason: { type: String }, // ✅ Lý do khóa tài khoản
+    
     verified: {
       type: Boolean,
       default: false,
