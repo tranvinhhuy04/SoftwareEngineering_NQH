@@ -355,7 +355,7 @@ export default function AdminDashboard() {
           >
             📊 Thống kê
           </button>
-          <button
+          {/* <button
             onClick={() => setActiveTab("accounts")}
             className={`px-4 py-2 font-semibold transition-colors ${activeTab === "accounts"
                 ? "text-green-400 border-b-2 border-green-400"
@@ -363,7 +363,7 @@ export default function AdminDashboard() {
               }`}
           >
             👥 Quản lý tài khoản
-          </button>
+          </button> */}
 
         </div>
 

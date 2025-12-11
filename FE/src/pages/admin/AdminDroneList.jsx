@@ -95,16 +95,24 @@ export default function AdminDroneList() {
     });
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Disable this drone?")) return;
+  const handleToggleActive = async (drone) => {
+    const newStatus = !drone.isActive;
+
+    if (!window.confirm(`Set drone to ${newStatus ? "ACTIVE" : "INACTIVE"}?`))
+      return;
 
     try {
-      await axiosInstance.delete(`/drone/admin/${id}`);
+      await axiosInstance.put(`/drone/admin/${drone._id}`, {
+        isActive: newStatus
+      });
+
       fetchDrones();
     } catch (err) {
-      console.error("Delete drone error:", err);
+      console.error("Update isActive error:", err);
     }
   };
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-100 py-10">
@@ -262,11 +270,13 @@ export default function AdminDroneList() {
                         </button>
 
                         <button
-                          onClick={() => handleDelete(d._id)}
-                          className="px-3 py-1 rounded-xl bg-red-500 text-white text-sm hover:bg-red-600"
+                          onClick={() => handleToggleActive(d)}
+                          className={`px-3 py-1 rounded-xl text-sm text-white 
+                            ${d.isActive ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"}`}
                         >
-                          Disable
+                          {d.isActive ? "Disable" : "Enable"}
                         </button>
+
                       </td>
                     </tr>
                   ))
